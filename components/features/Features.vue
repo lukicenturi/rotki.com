@@ -2,11 +2,7 @@
   <fragment>
     <anchor id="features" />
     <middle-menu />
-    <div
-      :class="{
-        [$style.wrapper]: true,
-      }"
-    >
+    <div :class="$style.wrapper">
       <div>
         <dashboard @download="$emit('download')" />
         <exchanges />

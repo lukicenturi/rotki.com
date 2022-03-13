@@ -41,11 +41,11 @@ export default defineComponent({
   @apply container mx-auto;
 
   margin-top: 247px;
-  padding-bottom: 400px;
+  padding-bottom: 200px;
 
   @include for-size(phone-only) {
     margin-top: 47px;
-    padding-bottom: 100px;
+    padding-bottom: 0;
   }
 }
 
