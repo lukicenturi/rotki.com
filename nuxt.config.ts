@@ -80,7 +80,6 @@ export default defineNuxtConfig({
     },
   },
 
-  css: [],
   ssr: true,
 
   components: [{ path: '~/components', pathPrefix: false }],
