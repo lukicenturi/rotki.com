@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import { RuiButton } from '@rotki/ui-library';
+import {
+  RuiAlert,
+  RuiButton,
+  RuiRevealableTextField,
+  RuiTextField,
+} from '@rotki/ui-library';
+import { get, set } from '@vueuse/core';
 import { useMainStore } from '~/store';
 
 const props = withDefaults(defineProps<{ modal?: boolean }>(), {
@@ -9,165 +15,104 @@ const props = withDefaults(defineProps<{ modal?: boolean }>(), {
 const emit = defineEmits<{ (e: 'complete'): void }>();
 
 const { modal } = toRefs(props);
-const username = ref('');
-const password = ref('');
-const showPassword = ref(false);
-const error = ref('');
+const username: Ref<string> = ref('');
+const password: Ref<string> = ref('');
+const error: Ref<string> = ref('');
+const hadError: Ref<boolean> = ref(false);
 
-const valid = computed(() => !!unref(username) && !!unref(password));
+const valid = computed(() => !!get(username) && !!get(password));
 
 const { login } = useMainStore();
 
 const performLogin = async () => {
-  error.value = await login({
-    username: username.value,
-    password: password.value,
-  });
+  set(
+    error,
+    await login({
+      username: username.value,
+      password: password.value,
+    }),
+  );
 
-  if (!error.value) {
-    if (modal.value) {
+  if (!get(error)) {
+    if (get(modal)) {
       emit('complete');
     } else {
       await navigateTo('/home');
     }
+  } else {
+    set(hadError, true);
   }
 };
-
-const css = useCssModule();
 </script>
 
 <template>
-  <BoxContainer>
-    <template #label>Sign in</template>
-    <InputField
-      id="username"
-      v-model="username"
-      filled
-      label="Username"
-      type="text"
-      autocomplete="username"
-      @focus="error = ''"
-    >
-      <template #prepend>
-        <span :class="css.prepend">
-          <UserIcon />
-        </span>
-      </template>
-    </InputField>
-    <InputField
-      id="password"
-      v-model="password"
-      :class="css.password"
-      :type="showPassword ? 'text' : 'password'"
-      filled
-      autocomplete="current-password"
-      label="Password"
-      @enter="performLogin()"
-      @focus="error = ''"
-    >
-      <template #prepend>
-        <span :class="css.prepend">
-          <PasswordIcon />
-        </span>
-      </template>
-      <template #append>
-        <button :class="css.show" @click="showPassword = !showPassword">
-          <span v-if="showPassword">HIDE</span>
-          <span v-else>SHOW</span>
-        </button>
-      </template>
-    </InputField>
-
-    <div :class="css.errorWrapper">
-      <div v-if="error" :class="css.error">{{ error }}</div>
+  <div class="w-[360px] space-y-8">
+    <div class="space-y-3">
+      <div class="text-h4">Sign in</div>
+      <div class="text-body-1 text-rui-text-secondary">
+        Premium users unlock the full potential of rotki by removing all limits
+        and unlocking all features.
+      </div>
     </div>
+    <div>
+      <div class="space-y-5">
+        <RuiTextField
+          id="username"
+          v-model="username"
+          dense
+          variant="outlined"
+          label="Username"
+          autocomplete="username"
+          hide-details
+          color="primary"
+          :error-messages="error ? [error] : []"
+          @focus="error = ''"
+        />
 
-    <div :class="css.buttonContainer">
+        <RuiRevealableTextField
+          id="password"
+          v-model="password"
+          variant="outlined"
+          dense
+          label="Password"
+          autocomplete="current-password"
+          hide-details
+          color="primary"
+          :error-messages="error ? [error] : []"
+          @enter="performLogin()"
+          @focus="error = ''"
+        />
+      </div>
+
+      <div class="flex justify-end mb-6 mt-2">
+        <ButtonLink to="/password/recover" inline>
+          Forgot password?
+        </ButtonLink>
+      </div>
+
+      <div v-if="error" class="text-body-1 text-center text-rui-error pb-6">
+        {{ error }}
+      </div>
+
       <RuiButton
         :disabled="!valid"
-        variant="default"
-        size="lg"
-        class="w-full"
         color="primary"
+        class="w-full"
+        size="lg"
         @click="performLogin()"
       >
-        Sign in
+        Continue
       </RuiButton>
     </div>
-
-    <div :class="css.reset">
-      <ButtonLink to="/password/recover" color="primary">
-        Forgot password?
-      </ButtonLink>
-    </div>
-
-    <div :class="css.divider" />
-
-    <div :class="css.create">
-      First time premium?
+    <div class="flex items-center justify-center">
+      <span class="text-rui-text-secondary"> First time premium? </span>
       <ButtonLink to="/signup" inline color="primary"> Sign up now </ButtonLink>
     </div>
-  </BoxContainer>
+  </div>
+  <div v-if="hadError" class="mt-14 w-[660px]">
+    <RuiAlert
+      type="error"
+      description="If you are writing your username and password from the app, we remind you that they are independent accounts."
+    />
+  </div>
 </template>
-
-<style lang="scss" module>
-@import '@/assets/css/media.scss';
-@import '@/assets/css/main.scss';
-
-.buttonContainer {
-  @apply flex flex-row align-middle justify-center mt-8;
-}
-
-.reset {
-  @apply flex flex-row justify-center text-rui-primary focus:text-yellow-800 my-6;
-
-  width: 100%;
-
-  @include for-size(phone-only) {
-    margin-top: calc($mobile-margin / 2);
-    margin-bottom: calc($mobile-margin / 2);
-  }
-}
-
-.prepend {
-  @apply p-3 flex items-center;
-}
-
-.password {
-  @apply mt-5;
-}
-
-.show {
-  @apply m-2 focus:outline-none;
-
-  width: 56px;
-  font-size: 12px;
-  line-height: 16px;
-  letter-spacing: 0;
-  color: #363f41;
-}
-
-.divider {
-  @apply border border-solid border-rui-text opacity-20;
-
-  width: 328px;
-}
-
-.create {
-  @apply flex flex-row align-middle justify-center mt-6 mb-2;
-}
-
-.signup {
-  @apply font-bold ml-2;
-}
-
-.error {
-  @apply text-rui-error text-xs tracking-tight;
-}
-
-.errorWrapper {
-  @apply flex flex-row justify-center -mt-1.5;
-
-  height: 18px;
-}
-</style>
