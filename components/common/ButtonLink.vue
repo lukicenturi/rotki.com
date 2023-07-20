@@ -30,6 +30,7 @@ const attrs = useAttrs();
   >
     <RuiButton
       v-bind="{ variant: 'text', ...attrs }"
+      type="button"
       :class="{ ['inline-flex py-0 !px-1 !text-[1em]']: inline }"
     >
       <slot>

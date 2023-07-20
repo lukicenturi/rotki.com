@@ -23,6 +23,10 @@ useHead({
   ...commonAttrs(),
 });
 const { visible } = useOverflow();
+
+definePageMeta({
+  layout: 'landing',
+});
 </script>
 
 <template>
