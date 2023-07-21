@@ -41,11 +41,14 @@ const css = useCssModule();
           <li>
             Did you know that as a premium user by providing your Github
             username you have priority for all issues reported in our
-            <ExternalLink
-              no-ref
-              text="bug tracker"
-              url="https://github.com/rotki/rotki/issues"
-            />
+            <ButtonLink
+              inline
+              color="primary"
+              external
+              to="https://github.com/rotki/rotki/issues"
+            >
+              bug tracker
+            </ButtonLink>
             ? The same applies to any feature requests.
           </li>
           <li>

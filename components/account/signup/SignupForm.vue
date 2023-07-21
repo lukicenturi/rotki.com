@@ -130,16 +130,21 @@ const css = useCssModule();
         <div :class="css.hint">
           <span :class="css.important">Important</span> Note: Creating an
           account in rotki.com is only needed to purchase a
-          <ExternalLink same-tab text="premium subscription" url="/products" />
+          <ButtonLink to="/products" inline color="primary">
+            premium subscription
+          </ButtonLink>
           Rotki is a local application and the account you create when you use
           it is stored on your computer. This is not the same account as premium
           and credentials for one account don't work for the other. To use Rotki
           simply
-          <ExternalLink
-            noreferrer
-            text="download"
-            url="https://github.com/rotki/rotki/releases/latest"
-          />
+          <ButtonLink
+            inline
+            color="primary"
+            external
+            to="/https://github.com/rotki/rotki/releases/latest"
+          >
+            download
+          </ButtonLink>
           and run it. Proceed only if you intend to purchase premium and unlock
           the premium features of the application.
         </div>
@@ -318,9 +323,13 @@ const css = useCssModule();
           />
           <span :class="css.terms">
             I have read and agreed to the
-            <ExternalLink text="Terms of Service" url="/tos" />
+            <ButtonLink inline color="primary" to="/tos">
+              Terms of Service
+            </ButtonLink>
             and the
-            <ExternalLink text="Privacy Policy" url="/privacy-policy" />
+            <ButtonLink inline color="primary" to="/privacy-policy">
+              Privacy Policy
+            </ButtonLink>
           </span>
         </label>
 

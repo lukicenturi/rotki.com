@@ -93,19 +93,16 @@ const css = useCssModule();
     </div>
 
     <div :class="css.reset">
-      <ExternalLink same-tab text="Forgot password?" url="/password/recover" />
+      <ButtonLink to="/password/recover" color="primary">
+        Forgot password?
+      </ButtonLink>
     </div>
 
     <div :class="css.divider" />
 
     <div :class="css.create">
       First time premium?
-      <ExternalLink
-        :class="css.signup"
-        same-tab
-        text="Sign up now"
-        url="/signup"
-      />
+      <ButtonLink to="/signup" inline color="primary"> Sign up now </ButtonLink>
     </div>
   </BoxContainer>
 </template>
