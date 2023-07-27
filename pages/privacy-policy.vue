@@ -1,7 +1,11 @@
-<template>
-  <MarkdownContent path="/documents/privacy-policy" />
-</template>
+<script setup lang="ts">
+definePageMeta({
+  layout: false,
+});
+</script>
 
-<style lang="scss">
-@import '@/assets/css/main.scss';
-</style>
+<template>
+  <NuxtLayout name="landing">
+    <MarkdownContent path="/documents/privacy-policy" />
+  </NuxtLayout>
+</template>

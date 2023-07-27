@@ -1,13 +1,15 @@
 import { get, set } from '@vueuse/core';
+import { groupBy } from 'graphql/jsutils/groupBy';
 import type { MarkdownParsedContent } from '@nuxt/content/dist/runtime/types';
 import type { ComputedRef, Ref } from 'vue';
 import { logger } from '~/utils/logger';
 import { replacePathPrefix } from '~/utils/api';
 import { GITHUB_CONTENT_PREFIX } from '~/utils/constants';
 
-interface JobMarkdownContent extends MarkdownParsedContent {
+export interface JobMarkdownContent extends MarkdownParsedContent {
   link?: string;
   open: boolean;
+  category: string;
 }
 
 /**
@@ -18,6 +20,12 @@ export const useMarkdownContent = () => {
   const openJobs: ComputedRef<JobMarkdownContent[]> = computed(() =>
     get(jobs).filter((job) => job.open),
   );
+  const groupedOpenJobsByCategory: ComputedRef<
+    Record<string, readonly JobMarkdownContent[]>
+  > = computed(() =>
+    Object.fromEntries(groupBy(get(openJobs), (item) => item.category)),
+  );
+
   const firstJob: ComputedRef<JobMarkdownContent | null> = computed(
     () => get(openJobs)[0] ?? null,
   );
@@ -89,6 +97,7 @@ export const useMarkdownContent = () => {
   return {
     jobs,
     openJobs,
+    groupedOpenJobsByCategory,
     firstJob,
     loadJob,
     loadJobs,

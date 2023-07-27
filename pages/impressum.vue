@@ -1,8 +1,11 @@
-<template>
-  <MarkdownContent path="/documents/impressum" />
-</template>
+<script setup lang="ts">
+definePageMeta({
+  layout: false,
+});
+</script>
 
-<style lang="scss">
-@import '@/assets/css/media.scss';
-@import '@/assets/css/main.scss';
-</style>
+<template>
+  <NuxtLayout name="landing">
+    <MarkdownContent path="/documents/impressum" />
+  </NuxtLayout>
+</template>

@@ -161,8 +161,8 @@ export default defineNuxtConfig({
       github: {
         prefix: GITHUB_CONTENT_PREFIX, // Prefix for routes used to query contents
         driver: 'github', // Driver used to fetch contents
-        repo: 'rotki/rotki.com',
-        branch: 'main',
+        repo: 'lukicenturi/rotki.com',
+        branch: 'jobs',
         dir: 'content', // Directory where contents are located. It could be a subdirectory of the repository.
       },
     },

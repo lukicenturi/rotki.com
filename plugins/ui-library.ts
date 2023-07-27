@@ -1,7 +1,9 @@
 import {
+  RiArrowDropRightLine,
   RiDiscordLine,
   RiExternalLinkLine,
   RiGithubLine,
+  RiLightbulbLine,
   RiLogoutBoxRLine,
   RiMailSendLine,
   RiTwitterLine,
@@ -13,9 +15,11 @@ export default defineNuxtPlugin((nuxtApp) => {
   nuxtApp.vueApp.use(RuiPlugin, {
     mode: 'light',
     icons: [
+      RiArrowDropRightLine,
       RiDiscordLine,
       RiExternalLinkLine,
       RiGithubLine,
+      RiLightbulbLine,
       RiLogoutBoxRLine,
       RiMailSendLine,
       RiTwitterLine,
