@@ -8,84 +8,55 @@ const { account } = storeToRefs(store);
 const apiKey = computed(() => account.value?.apiKey ?? '');
 const apiSecret = computed(() => account.value?.apiSecret ?? '');
 const hasApiKeys = computed(() => apiKey.value && apiSecret.value);
-const showKey = ref(false);
-const showSecret = ref(false);
 
 const regenerateKeys = async () => await store.updateKeys();
 
-const css = useCssModule();
+const { t } = useI18n();
 </script>
 
 <template>
-  <CardContainer>
-    <TextHeading :class="css.heading" subheading>API Credentials</TextHeading>
-    <div :class="css.entry">
-      <InputField
-        id="api-key"
-        :class="css.input"
+  <div>
+    <div class="mb-6 flex justify-between items-center">
+      <div class="text-h6">{{ t('account.api_keys.title') }}</div>
+      <div>
+        <RuiButton color="primary" @click="regenerateKeys()">
+          <template #prepend>
+            <RuiIcon name="refresh-line" />
+          </template>
+          {{ hasApiKeys ? t('actions.regenerate') : t('actions.generate') }}
+        </RuiButton>
+      </div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <RuiRevealableTextField
+        id="username"
         :model-value="apiKey"
-        :type="showKey ? 'text' : 'password'"
-        label="API Key"
+        variant="outlined"
+        :label="t('account.api_keys.api_key')"
         readonly
-      />
-      <VisibilityButton v-model="showKey" :class="css.toggle" />
-      <div :class="css.col">
-        <CopyButton :class="css.button" :model-value="apiKey" />
-      </div>
-    </div>
-    <div :class="css.entry">
-      <InputField
-        id="api-secret"
-        :class="css.input"
+        hide-details
+        color="primary"
+      >
+        <template #append>
+          <div class="h-6 border-r border-rui-grey-400 ml-2 mr-1" />
+          <CopyButton :model-value="apiKey" />
+        </template>
+      </RuiRevealableTextField>
+
+      <RuiRevealableTextField
+        id="username"
         :model-value="apiSecret"
-        :type="showSecret ? 'text' : 'password'"
-        label="API Secret"
+        variant="outlined"
+        :label="t('account.api_keys.api_secret')"
         readonly
-      />
-      <VisibilityButton v-model="showSecret" :class="css.toggle" />
-      <div :class="css.col">
-        <CopyButton :class="css.button" :model-value="apiSecret" />
-      </div>
+        hide-details
+        color="primary"
+      >
+        <template #append>
+          <div class="h-6 border-r border-rui-grey-400 ml-2 mr-1" />
+          <CopyButton :model-value="apiSecret" />
+        </template>
+      </RuiRevealableTextField>
     </div>
-    <RuiButton
-      variant="outlined"
-      size="lg"
-      class="uppercase outline-2 mt-3"
-      rounded
-      color="primary"
-      @click="regenerateKeys()"
-    >
-      {{ hasApiKeys ? 'Regenerate' : 'Generate' }}
-    </RuiButton>
-  </CardContainer>
+  </div>
 </template>
-
-<style lang="scss" module>
-.col {
-  @apply flex flex-col;
-}
-
-.row {
-  @apply py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8;
-}
-
-.entry {
-  @apply flex flex-row min-w-full items-center;
-}
-
-.input {
-  @apply flex-grow;
-}
-
-.button {
-  @apply ml-3 mt-1.5;
-}
-
-.toggle {
-  @apply ml-3 mt-1 mr-0 mb-0;
-}
-
-.heading {
-  @apply my-4;
-}
-</style>

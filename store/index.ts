@@ -212,6 +212,14 @@ export const useMainStore = defineStore('main', () => {
 
   const { stop, start } = useTimeoutFn(() => set(cancellationError, ''), 7000);
 
+  const subscriptions: ComputedRef<Subscription[]> = computed(() => {
+    const userAccount = get(account);
+    if (!userAccount) {
+      return [];
+    }
+    return userAccount.subscriptions;
+  });
+
   const cancelSubscription = async (subscription: Subscription) => {
     const acc = get(account);
     assert(acc);
@@ -519,6 +527,7 @@ export const useMainStore = defineStore('main', () => {
     account,
     plans,
     cancellationError,
+    subscriptions,
     login,
     getAccount,
     changePassword,

@@ -1,30 +1,48 @@
 <script setup lang="ts">
 import { get, useIntervalFn } from '@vueuse/core';
 import { storeToRefs } from 'pinia';
+import { type TableColumn } from '@rotki/ui-library/dist/components/tables/DataTable.vue';
 import { useMainStore } from '~/store';
 import { type Subscription } from '~/types';
-import { type DataTableHeader } from '~/types/common';
 
-const headers: DataTableHeader[] = [
-  { text: 'Plan', value: '' },
-  { text: 'Created', value: '', sortable: true },
-  { text: 'Next Billing', value: '', sortable: true },
-  { text: 'Cost in € per period', value: '', sortable: true },
-  { text: 'Status', value: '' },
-  { text: 'Actions', value: '', className: 'text-right' },
+const { t } = useI18n();
+
+const headers: TableColumn[] = [
+  {
+    label: t('common.plan'),
+    key: 'planName',
+    cellClass: 'font-bold',
+    class: 'capitalize',
+  },
+  {
+    label: t('account.subscriptions.headers.created'),
+    key: 'createdDate',
+    sortable: true,
+  },
+  {
+    label: t('account.subscriptions.headers.next_billing'),
+    key: 'nextActionDate',
+    sortable: true,
+  },
+  {
+    label: t('account.subscriptions.headers.cost_in_symbol_per_period', {
+      symbol: '€',
+    }),
+    key: 'nextBillingAmount',
+    sortable: true,
+    align: 'end',
+  },
+  { label: t('common.status'), key: 'status', class: 'capitalize' },
+  {
+    label: t('common.actions'),
+    key: 'actions',
+    align: 'end',
+    class: 'capitalize',
+  },
 ];
 
 const store = useMainStore();
-const { account, cancellationError } = storeToRefs(store);
-
-const subscriptions = computed(() => {
-  const userAccount = get(account);
-  if (!userAccount) {
-    return [];
-  }
-  return userAccount.subscriptions;
-});
-
+const { subscriptions } = storeToRefs(store);
 const pending = computed(() => get(subscriptions).filter((sub) => sub.pending));
 
 const renewableSubscriptions = computed(() =>
@@ -88,11 +106,6 @@ watch(pending, (pending) => {
 
 onUnmounted(() => pause());
 
-const canUsePremium = computed(() => {
-  const arePending = get(pending);
-  return get(account)?.canUsePremium || arePending.length > 0;
-});
-
 const hasAction = (sub: Subscription, action: 'renew' | 'cancel') => {
   if (action === 'cancel') {
     return sub.status !== 'Pending' && sub.actions.includes('cancel');
@@ -105,117 +118,55 @@ const hasAction = (sub: Subscription, action: 'renew' | 'cancel') => {
 const displayActions = (sub: Subscription) =>
   hasAction(sub, 'renew') || hasAction(sub, 'cancel');
 
-const css = useCssModule();
+const getChipStatusColor = (status: string) =>
+  ({
+    Active: 'success',
+    Canceled: 'error',
+    Pending: 'warning',
+    'Past Due': 'warning',
+  })[status];
+
+const pagination = ref({ limit: 10, page: 1 });
 </script>
 
 <template>
   <div>
-    <PremiumPlaceholder v-if="!canUsePremium" :class="css.purchase" />
-    <DataTable
-      v-if="subscriptions.length > 0"
-      :headers="headers"
-      :items="subscriptions"
+    <div class="text-h6 mb-6">
+      {{ t('account.subscriptions.title') }}
+    </div>
+    <RuiDataTable
+      :pagination="{ ...pagination, total: subscriptions.length }"
+      class="border rounded-xl"
+      :cols="headers"
+      :rows="subscriptions"
+      :empty="{
+        description: t('account.subscriptions.no_subscriptions_found'),
+      }"
+      row-attr="identifier"
+      @update:pagination="pagination = $event"
     >
-      <template #title>Subscription History</template>
-      <template #item="{ item }">
-        <td :class="css.td">
-          {{ item.planName }}
-        </td>
-        <td :class="css.td">
-          <div :class="css.text">
-            {{ item.createdDate }}
-          </div>
-        </td>
-        <td :class="css.td">
-          <div :class="css.text">
-            {{ item.nextActionDate }}
-          </div>
-        </td>
-        <td :class="css.td">
-          <div :class="css.text">
-            {{ item.nextBillingAmount }}
-          </div>
-        </td>
-        <td :class="css.td">
-          <span
-            :class="{
-              [css.status]: true,
-              [css.active]: item.status === 'Active',
-              [css.cancelled]: item.status === 'Cancelled',
-              [css.pending]: item.status === 'Pending',
-              [css.pastDue]: item.status === 'Past Due',
-            }"
+      <template #item.status="{ row }">
+        <RuiChip size="sm" :color="getChipStatusColor(row.status)">
+          {{ row.status }}
+        </RuiChip>
+      </template>
+
+      <template #item.actions="{ row }">
+        <div v-if="displayActions(row)" class="flex gap-2 justify-end">
+          <CancelSubscription
+            v-if="hasAction(row, 'cancel')"
+            :subscription="row"
+          />
+          <ButtonLink
+            v-if="hasAction(row, 'renew')"
+            :to="renewLink"
+            color="primary"
           >
-            {{ item.status }}
-          </span>
-        </td>
-        <td :class="css.action">
-          <div v-if="displayActions(item)">
-            <CancelSubscription
-              v-if="hasAction(item, 'cancel')"
-              :subscription="item"
-            />
-            <NuxtLink
-              v-if="hasAction(item, 'renew')"
-              :class="css.actionButton"
-              :to="renewLink"
-            >
-              Renew
-            </NuxtLink>
-          </div>
-          <div v-else>None</div>
-        </td>
+            {{ t('actions.renew') }}
+          </ButtonLink>
+        </div>
+        <div v-else class="capitalize">{{ t('common.none') }}</div>
       </template>
-    </DataTable>
-    <ErrorNotification :visible="!!cancellationError">
-      <template #title>Cancellation Failure</template>
-      <template #description>
-        {{ cancellationError }}
-      </template>
-    </ErrorNotification>
+    </RuiDataTable>
   </div>
 </template>
-
-<style lang="scss" module>
-@import '@/assets/css/media.scss';
-
-.td {
-  @apply px-6 py-4 whitespace-nowrap;
-}
-
-.text {
-  @apply text-sm text-gray-500;
-}
-
-.action {
-  @apply px-6 py-4 whitespace-nowrap text-right text-sm font-medium;
-}
-
-.actionButton {
-  @apply text-indigo-600 hover:text-indigo-900;
-}
-
-.status {
-  @apply px-2 inline-flex text-xs leading-5 font-semibold rounded-full;
-}
-
-.active {
-  @apply bg-green-100 text-green-800;
-}
-
-.cancelled {
-  @apply bg-red-100 text-red-600;
-}
-
-.pending {
-  @apply bg-yellow-100 text-yellow-600;
-}
-
-.pastDue {
-  @apply bg-yellow-300 text-yellow-800;
-}
-
-.purchase {
-  @apply mb-8;
-}
-</style>
