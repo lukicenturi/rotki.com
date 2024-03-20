@@ -430,6 +430,10 @@
           "start": "Start Subscription",
           "chose": "You chose:",
           "payment_description": "Payments are safely processed with Braintree a PayPal Service",
+          "labels": {
+            "blockchain": "Blockchain",
+            "token": "Token"
+          },
           "metamask": {
             "action": "Pay with Metamask",
             "notice": "You can pay with metamask, your mobile wallet or manually send the exact amount to the following address above. Once the whole amount is sent and manually processed, then a receipt will be sent to your email and your subscription will be activated.",

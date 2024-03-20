@@ -33,7 +33,7 @@ const abi = [
   'event Transfer(address indexed from, address indexed to, uint amount)',
 ];
 
-export const getChainId = (testing: boolean) => BigInt(testing ? 11155111 : 1);
+export const getChainId = (testing: boolean, chainId: number = 1) => BigInt(testing ? 11155111 : chainId);
 
 export function useWeb3Payment(data: Ref<CryptoPayment | null>, getProvider: () => Provider, testing: boolean) {
   const { markTransactionStarted } = useMainStore();

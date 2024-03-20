@@ -183,7 +183,7 @@ export type CardPaymentResponse = z.infer<typeof CardPaymentResponse>;
 
 const CryptoPayment = z.object({
   cryptoAddress: z.string(),
-  cryptocurrency: z.enum(supportedCurrencies),
+  cryptocurrency: z.string(),
   finalPriceInCrypto: z.string().nonempty(),
   finalPriceInEur: z.string().nonempty(),
   hoursForPayment: z.number(),
@@ -204,7 +204,7 @@ export const CryptoPaymentResponse = z.object({
 export type CryptoPaymentResponse = z.infer<typeof CryptoPaymentResponse>;
 
 const PendingCryptoPayment = z.object({
-  currency: z.enum(['ETH', 'BTC', 'DAI']).optional(),
+  currency: z.string().optional(),
   pending: z.boolean(),
   transactionStarted: z.boolean().optional(),
 });
@@ -291,3 +291,14 @@ export const CreateCardNonceResponse = z.object({
 });
 
 export type CreateCardNonceResponse = z.infer<typeof CreateCardNonceResponse>;
+
+export const PaymentAsset = z.object({
+  address: z.string().optional(),
+  isNativeCurrency: z.literal(true).optional(),
+  name: z.string(),
+  symbol: z.string(),
+});
+
+export const PaymentAssetResponse = z.record(z.record(PaymentAsset));
+
+export type PaymentAssetResponse = z.infer<typeof PaymentAssetResponse>;

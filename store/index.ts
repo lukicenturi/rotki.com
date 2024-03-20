@@ -36,7 +36,6 @@ import type {
   PasswordChangePayload,
   ProfilePayload,
 } from '~/types/account';
-import type { Currency } from '~/composables/plan';
 
 const SESSION_TIMEOUT = 3600000;
 
@@ -335,7 +334,7 @@ export const useMainStore = defineStore('main', () => {
 
   const cryptoPayment = async (
     plan: number,
-    currency: Currency,
+    currencyId: string,
     subscriptionId?: string,
   ): Promise<Result<CryptoPayment, PaymentError>> => {
     try {
@@ -344,7 +343,7 @@ export const useMainStore = defineStore('main', () => {
         {
           body: convertKeys(
             {
-              currency,
+              currencyId,
               months: plan,
               subscriptionId,
             },
@@ -447,7 +446,7 @@ export const useMainStore = defineStore('main', () => {
 
   const switchCryptoPlan = async (
     plan: number,
-    currency: Currency,
+    currency: string,
     subscriptionId?: string,
   ): Promise<Result<CryptoPayment, PaymentError>> => {
     try {

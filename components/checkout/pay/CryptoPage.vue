@@ -23,7 +23,7 @@ let provider: Provider | null = null;
 onMounted(async () => {
   const selectedPlan = get(plan);
   const selectedCurrency = get(currency);
-  if (selectedPlan > 0 && selectedCurrency) {
+  if (selectedPlan) {
     provider = await detectEthereumProvider();
     logger.debug(
       `provider: ${!!provider}, is metamask: ${provider?.isMetaMask}`,
@@ -48,7 +48,7 @@ onMounted(async () => {
     set(loading, false);
   }
   else {
-    await navigateTo('/products');
+    // await navigateTo('/products');
   }
 });
 

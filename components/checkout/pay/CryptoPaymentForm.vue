@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { parseEther, parseUnits } from 'ethers';
+import { parseEther } from 'ethers';
 import { toCanvas } from 'qrcode';
 import { get, set, useClipboard } from '@vueuse/core';
 import { logger } from '~/utils/logger';
@@ -25,18 +25,20 @@ const config = useRuntimeConfig();
 async function createPaymentQR(payment: CryptoPayment, canvas: HTMLCanvasElement) {
   let qrText = '';
   const chainId = getChainId(!!config.public.testing);
-  if (payment.cryptocurrency === 'BTC') {
-    qrText = `bitcoin:${payment.cryptoAddress}?amount=${payment.finalPriceInCrypto}&label=Rotki`;
+
+  const cryptoAddress = payment.cryptoAddress;
+
+  if (payment.cryptocurrency === 'bitcoin:BTC') {
+    qrText = `bitcoin:${cryptoAddress}?amount=${payment.finalPriceInCrypto}&label=Rotki`;
   }
-  else if (payment.cryptocurrency === 'ETH') {
-    const ethPrice = parseEther(payment.finalPriceInCrypto);
-    qrText = `ethereum:${
-      payment.cryptoAddress
-    }@${chainId}?value=${ethPrice.toString()}`;
-  }
-  else if (payment.cryptocurrency === 'DAI') {
-    const tokenPrice = parseUnits(payment.finalPriceInCrypto, 18);
-    qrText = `ethereum:${payment.tokenAddress}@${chainId}/transfer?address=${payment.cryptoAddress}&uint256=${tokenPrice}`;
+  else {
+    const tokenAddress = payment.tokenAddress;
+    const tokenAmount = parseEther(payment.finalPriceInCrypto);
+
+    if (!tokenAddress)
+      qrText = `ethereum:${cryptoAddress}@${chainId}?amount=${tokenAmount}`;
+    else
+      qrText = `ethereum:${tokenAddress}@${chainId}/transfer?address=${cryptoAddress}&uint256=${tokenAmount}`;
   }
 
   logger.info(qrText);
