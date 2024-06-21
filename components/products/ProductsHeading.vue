@@ -8,7 +8,7 @@ const { t } = useI18n();
       <div class="flex flex-col gap-12">
         <div class="flex flex-col gap-6">
           <div class="text-rui-light-primary text-h6 font-medium">
-            {{ t('products.features.analytics.heading') }}
+            {{ t('products.heading') }}
           </div>
           <h2 class="text-h4 lg:text-h2 !font-bold">
             {{ t('products.title') }}
