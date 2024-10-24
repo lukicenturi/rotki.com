@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
+import { get } from '@vueuse/core';
 import { useMainStore } from '~/store';
 
 const store = useMainStore();
 const { account } = storeToRefs(store);
 
 const email = computed(() => {
-  const userAccount = account.value;
+  const userAccount = get(account);
   return !userAccount ? '' : userAccount.email;
+});
+
+const username = computed(() => {
+  const userAccount = get(account);
+  return !userAccount ? '' : userAccount.username;
 });
 
 const { t } = useI18n();
@@ -22,8 +28,17 @@ const { t } = useI18n();
       <div class="space-y-5">
         <RuiTextField
           id="email"
+          v-model="username"
+          readonly
+          variant="outlined"
+          :label="t('auth.common.username')"
+          hide-details
+          color="primary"
+        />
+        <RuiTextField
+          id="email"
           v-model="email"
-          disabled
+          readonly
           variant="outlined"
           :label="t('auth.common.email')"
           hide-details
