@@ -115,6 +115,8 @@ export default defineNuxtPlugin((nuxtApp) => {
         LuWallet,
         LuTrophy,
         LuMinus,
+        LuTrash2,
+        LuDownload,
       ],
       mode: 'light',
     },
