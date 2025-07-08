@@ -15,7 +15,8 @@ export interface TierInfoResult {
   releaseName: string;
 }
 
-export async function fetchTierInfo(tierId: number, tierKey: string): Promise<TierInfoResult | null> {
+// Fallback function for direct RPC calls (client-side only)
+async function fetchTierInfoDirect(tierId: number, tierKey: string): Promise<TierInfoResult | null> {
   try {
     const provider = new ethers.JsonRpcProvider(RPC_URL);
     const contract = new ethers.Contract(CONTRACT_ADDRESS, ROTKI_SPONSORSHIP_ABI, provider);
@@ -71,6 +72,35 @@ export async function fetchTierInfo(tierId: number, tierKey: string): Promise<Ti
   }
 }
 
+export async function fetchTierInfo(tierId: number, tierKey: string): Promise<TierInfoResult | null> {
+  // Use server endpoint when available (SSR or client-side)
+  if (import.meta.server || import.meta.client) {
+    try {
+      const response = await $fetch<{ success: boolean; data: Record<string, TierInfoResult | null> }>('/api/nft/tier-info', {
+        query: {
+          tierIds: tierId.toString(),
+          tierKeys: tierKey,
+        },
+      });
+
+      if (response.success && response.data[tierKey]) {
+        return response.data[tierKey];
+      }
+    }
+    catch (error_) {
+      logger.error(`Error fetching tier info from server for ${tierKey}:`, error_);
+
+      // Fallback to direct RPC call only on client-side
+      if (import.meta.client) {
+        logger.info(`Falling back to direct RPC call for ${tierKey}`);
+        return fetchTierInfoDirect(tierId, tierKey);
+      }
+    }
+  }
+
+  return null;
+}
+
 export async function loadNFTImagesAndSupply(tiers: { key: string; tierId: number }[]): Promise<{
   images: Record<string, string>;
   supplies: Record<string, TierSupply>;
@@ -82,21 +112,63 @@ export async function loadNFTImagesAndSupply(tiers: { key: string; tierId: numbe
   const benefits: Record<string, TierBenefits> = {};
   let releaseName = '';
 
-  for (const tier of tiers) {
-    const tierInfo = await fetchTierInfo(tier.tierId, tier.key);
-    if (tierInfo) {
-      images[tier.key] = tierInfo.imageUrl;
-      supplies[tier.key] = {
-        currentSupply: tierInfo.currentSupply,
-        maxSupply: tierInfo.maxSupply,
-        metadataURI: tierInfo.metadataURI,
-      };
-      benefits[tier.key] = {
-        benefits: tierInfo.benefits,
-        description: tierInfo.description,
-      };
-      if (tierInfo.releaseName && !releaseName) {
-        releaseName = tierInfo.releaseName;
+  // Use batch endpoint for better performance
+  try {
+    const tierIds = tiers.map(tier => tier.tierId.toString()).join(',');
+    const tierKeys = tiers.map(tier => tier.key).join(',');
+
+    const response = await $fetch<{ success: boolean; data: Record<string, TierInfoResult | null> }>('/api/nft/tier-info', {
+      query: {
+        tierIds,
+        tierKeys,
+      },
+    });
+
+    if (response.success) {
+      for (const tier of tiers) {
+        const tierInfo = response.data[tier.key];
+        if (tierInfo) {
+          images[tier.key] = tierInfo.imageUrl;
+          supplies[tier.key] = {
+            currentSupply: tierInfo.currentSupply,
+            maxSupply: tierInfo.maxSupply,
+            metadataURI: tierInfo.metadataURI,
+          };
+          benefits[tier.key] = {
+            benefits: tierInfo.benefits,
+            description: tierInfo.description,
+          };
+          if (tierInfo.releaseName && !releaseName) {
+            releaseName = tierInfo.releaseName;
+          }
+        }
+      }
+      return { benefits, images, releaseName, supplies };
+    }
+  }
+  catch (error_) {
+    logger.error('Error fetching batch tier info from server:', error_);
+  }
+
+  // Fallback to individual calls (only on client-side)
+  if (import.meta.client) {
+    logger.info('Falling back to individual tier info calls');
+    for (const tier of tiers) {
+      const tierInfo = await fetchTierInfo(tier.tierId, tier.key);
+      if (tierInfo) {
+        images[tier.key] = tierInfo.imageUrl;
+        supplies[tier.key] = {
+          currentSupply: tierInfo.currentSupply,
+          maxSupply: tierInfo.maxSupply,
+          metadataURI: tierInfo.metadataURI,
+        };
+        benefits[tier.key] = {
+          benefits: tierInfo.benefits,
+          description: tierInfo.description,
+        };
+        if (tierInfo.releaseName && !releaseName) {
+          releaseName = tierInfo.releaseName;
+        }
       }
     }
   }
