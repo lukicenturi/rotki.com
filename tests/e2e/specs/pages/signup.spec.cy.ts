@@ -13,9 +13,9 @@ describe('signup test', () => {
 
   it('show introduction page', () => {
     cy.contains('Important Note').should('be.visible');
-    cy.get('[data-cy=next-button]').should('be.visible');
-    cy.get('[data-cy=next-button]').should('be.enabled');
-    cy.get('[data-cy=next-button]').click();
+    cy.get('[data-testid=next-button]').should('be.visible');
+    cy.get('[data-testid=next-button]').should('be.enabled');
+    cy.get('[data-testid=next-button]').click();
   });
 
   it('show account form', () => {
@@ -23,7 +23,7 @@ describe('signup test', () => {
     cy.get('input#email').first().as('emailInput');
     cy.get('input#password').first().as('passwordInput');
     cy.get('input#password-confirmation').first().as('confirmPasswordInput');
-    cy.get('button[data-cy=next-button]').first().as('nextButton');
+    cy.get('button[data-testid=next-button]').first().as('nextButton');
 
     cy.get('@usernameInput').should('exist');
     cy.get('@emailInput').should('exist');
@@ -44,7 +44,7 @@ describe('signup test', () => {
     cy.get('input#last-name').first().as('lastNameInput');
     cy.get('input#company-name').first().as('companyNameInput');
     cy.get('input#vat-id').first().as('vatIdInput');
-    cy.get('button[data-cy=next-button]').first().as('nextButton');
+    cy.get('button[data-testid=next-button]').first().as('nextButton');
 
     cy.get('@firstNameInput').should('exist');
     cy.get('@lastNameInput').should('exist');

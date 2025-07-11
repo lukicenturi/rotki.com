@@ -152,12 +152,12 @@ const { t } = useI18n({ useScope: 'global' });
         {{ t('actions.back') }}
       </RuiButton>
       <RuiButton
-        data-cy="next-button"
+        data-testid="next-button"
         :disabled="v$.$invalid"
         color="primary"
         class="w-full"
         size="lg"
-        type="submit"
+        type="button"
         @click="emit('next')"
       >
         {{ t('actions.continue') }}

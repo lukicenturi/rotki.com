@@ -181,6 +181,7 @@ export default defineNuxtConfig({
   sitemap: {
     exclude: nonIndexed,
   },
+
   ssr: true,
   tailwindcss: {
     config: {

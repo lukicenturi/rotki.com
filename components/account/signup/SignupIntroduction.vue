@@ -39,7 +39,7 @@ const { t } = useI18n({ useScope: 'global' });
       color="primary"
       class="w-full"
       size="lg"
-      data-cy="next-button"
+      data-testid="next-button"
       @click="emit('next')"
     >
       {{ t('actions.continue') }}
