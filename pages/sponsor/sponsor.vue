@@ -178,10 +178,22 @@ async function checkAllowanceIfNeeded() {
 watch(selectedCurrency, checkAllowanceIfNeeded);
 watch(connected, checkAllowanceIfNeeded);
 
+// Function to call after successful minting
+// eslint-disable-next-line unused-imports/no-unused-vars
+async function onMintingSuccess(transactionHash: string) {
+  // TODO: call the endpoint to update the leaderboard
+}
+
 // Show success dialog when minting is successful
 watch(() => get(sponsorshipState).status, async (newStatus) => {
   if (newStatus === 'success' && get(transactionUrl)) {
     set(showSuccessDialog, true);
+
+    // Call the success callback function
+    const state = get(sponsorshipState);
+    if (state.txHash) {
+      await onMintingSuccess(state.txHash);
+    }
   }
 });
 

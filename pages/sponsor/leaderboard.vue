@@ -53,6 +53,9 @@ const { t } = useI18n({ useScope: 'global' });
 // Leaderboard metadata
 const { lastUpdated, fetchMetadata } = useLeaderboardMetadata();
 
+// Breakpoint detection
+const { isMdAndDown } = useBreakpoint();
+
 const LeaderboardEntry = z.object({
   rank: z.number().nullable(),
   address: z.string(),
@@ -118,6 +121,8 @@ function formatAddressDisplay(holder: LeaderboardEntry): {
   showTooltip: boolean;
   isEns: boolean;
 } {
+  const shouldShorten = get(isMdAndDown);
+
   if (holder.ensName) {
     return {
       primary: `${holder.ensName} - ${shortenAddress(holder.address)}`,
@@ -127,9 +132,9 @@ function formatAddressDisplay(holder: LeaderboardEntry): {
     };
   }
   return {
-    primary: holder.address,
+    primary: shouldShorten ? shortenAddress(holder.address) : holder.address,
     secondary: null,
-    showTooltip: false,
+    showTooltip: shouldShorten,
     isEns: false,
   };
 }
@@ -197,6 +202,13 @@ onMounted(async () => {
                 class="mt-4 pt-2 w-full"
               />
               <div class="flex items-center space-x-4 flex-1">
+                <!-- Avatar (ENS or Blockie) -->
+                <AddressAvatar
+                  :ens-name="user.ensName"
+                  :address="user.address"
+                  size="md"
+                />
+
                 <div class="flex-1">
                   <div class="space-y-1">
                     <RuiTooltip
