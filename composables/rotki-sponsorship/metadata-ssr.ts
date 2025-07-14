@@ -32,7 +32,7 @@ export async function fetchTierInfoSSR(tierId: number, tierKey: string): Promise
 /**
  * SSR-compatible version of loadNFTImagesAndSupply that uses the server API
  */
-export async function loadNFTImagesAndSupplySSR(tiers: { key: string; tierId: number }[]): Promise<{
+export async function loadNFTImagesAndSupplySSR(tiers: { key: string; tierId: number }[], forceRefresh = false): Promise<{
   images: Record<string, string>;
   supplies: Record<string, TierSupply>;
   benefits: Record<string, TierBenefits>;
@@ -50,10 +50,17 @@ export async function loadNFTImagesAndSupplySSR(tiers: { key: string; tierId: nu
   try {
     // Batch fetch all tiers at once
     const tierIds = tiers.map(t => t.tierId).join(',');
+    const params: Record<string, string> = {
+      tierIds,
+    };
+
+    // Add timestamp to force cache bypass when needed
+    if (forceRefresh) {
+      params._t = Date.now().toString();
+    }
+
     const response = await $fetch<TierInfoResponse>('/api/nft/tier-info', {
-      params: {
-        tierIds,
-      },
+      params,
     });
 
     // Process the results

@@ -1,7 +1,8 @@
 import type { TierBenefits, TierSupply } from './types';
+import { get } from '@vueuse/shared';
 import { ethers } from 'ethers';
 import { useLogger } from '~/utils/use-logger';
-import { CONTRACT_ADDRESS, IPFS_URL, ROTKI_SPONSORSHIP_ABI, RPC_URL } from './constants';
+import { IPFS_URL, ROTKI_SPONSORSHIP_ABI, useNftConfig } from './config';
 
 const logger = useLogger('rotki-sponsorship-metadata');
 
@@ -17,8 +18,9 @@ export interface TierInfoResult {
 
 export async function fetchTierInfo(tierId: number, tierKey: string): Promise<TierInfoResult | null> {
   try {
-    const provider = new ethers.JsonRpcProvider(RPC_URL);
-    const contract = new ethers.Contract(CONTRACT_ADDRESS, ROTKI_SPONSORSHIP_ABI, provider);
+    const { CONTRACT_ADDRESS, RPC_URL } = useNftConfig();
+    const provider = new ethers.JsonRpcProvider(get(RPC_URL));
+    const contract = new ethers.Contract(get(CONTRACT_ADDRESS), ROTKI_SPONSORSHIP_ABI, provider);
 
     const releaseId = await contract.currentReleaseId();
     const [maxSupply, currentSupply, metadataURI] = await contract.getTierInfo(releaseId, tierId);

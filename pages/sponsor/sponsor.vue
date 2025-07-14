@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { get, set } from '@vueuse/core';
 import { useSponsorshipData } from '~/composables/rotki-sponsorship';
-import { ETH_ADDRESS } from '~/composables/rotki-sponsorship/constants';
+import { ETH_ADDRESS } from '~/composables/rotki-sponsorship/config';
 import { useRotkiSponsorshipPayment } from '~/composables/rotki-sponsorship/payment';
 import { SPONSORSHIP_TIERS } from '~/composables/rotki-sponsorship/types';
 import { findTierByKey, isTierAvailable } from '~/composables/rotki-sponsorship/utils';
+import { useLeaderboardMetadata } from '~/composables/use-leaderboard-metadata';
 import { commonAttrs, getMetadata } from '~/utils/metadata';
 
 const description = 'Sponsor rotki\'s next release';
@@ -32,6 +33,9 @@ const showSuccessDialog = ref(false);
 
 const { t } = useI18n({ useScope: 'global' });
 
+// Fetch leaderboard metadata on mount to ensure config is available
+const { fetchMetadata } = useLeaderboardMetadata();
+
 const {
   connected,
   isExpectedChain,
@@ -46,6 +50,7 @@ const {
   mintSponsorshipNFT,
   approveToken,
   checkTokenAllowance,
+  isLoadingPaymentTokens,
 } = useRotkiSponsorshipPayment();
 
 const { data: sponsorshipData, pending: isLoading } = await useSponsorshipData();
@@ -174,13 +179,15 @@ watch(selectedCurrency, checkAllowanceIfNeeded);
 watch(connected, checkAllowanceIfNeeded);
 
 // Show success dialog when minting is successful
-watch(() => get(sponsorshipState).status, (newStatus) => {
+watch(() => get(sponsorshipState).status, async (newStatus) => {
   if (newStatus === 'success' && get(transactionUrl)) {
     set(showSuccessDialog, true);
   }
 });
 
 onMounted(async () => {
+  // Fetch metadata to ensure config is available
+  await fetchMetadata();
   // Only load currencies and check allowance on client-side
   await loadPaymentTokens();
   await checkAllowanceIfNeeded();
@@ -266,7 +273,20 @@ onMounted(async () => {
             <h6 class="font-bold">
               {{ t('sponsor.sponsor_page.payment_currency') }}
             </h6>
-            <div class="flex gap-2">
+            <div
+              v-if="isLoadingPaymentTokens"
+              class="flex gap-2"
+            >
+              <RuiSkeletonLoader
+                v-for="i in 2"
+                :key="i"
+                class="w-20 h-8"
+              />
+            </div>
+            <div
+              v-else
+              class="flex gap-2"
+            >
               <RuiButton
                 v-for="token in availableTokens"
                 :key="token.symbol"
@@ -317,6 +337,9 @@ onMounted(async () => {
                 <div class="flex flex-col items-end">
                   <div class="text-lg font-bold text-rui-primary">
                     {{ (() => {
+                      if (isLoadingPaymentTokens) {
+                        return t('sponsor.sponsor_page.pricing.loading');
+                      }
                       const price = get(getPriceForTier)(selectedCurrency, tier.key as 'bronze' | 'silver' | 'gold');
                       return price ? `${price} ${selectedCurrency}` : t('sponsor.sponsor_page.pricing.loading');
                     })() }}

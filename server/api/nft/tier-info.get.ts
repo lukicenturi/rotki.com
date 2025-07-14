@@ -1,36 +1,59 @@
 import type { TierInfoResult } from '~/composables/rotki-sponsorship/metadata';
 import { ethers } from 'ethers';
 import { z } from 'zod';
-import { CONTRACT_ADDRESS, IPFS_URL, ROTKI_SPONSORSHIP_ABI, RPC_URL } from '~/composables/rotki-sponsorship/constants';
+import { getServerNftConfig, IPFS_URL, ROTKI_SPONSORSHIP_ABI } from '~/composables/rotki-sponsorship/config';
 import { CACHE_TTL } from '~/server/utils/cache';
 import { Multicall } from '~/server/utils/multicall';
 import { useLogger } from '~/utils/use-logger';
 
 const logger = useLogger('nft-tier-info-api');
 
-// Singleton provider instance
+// Cached config
+let cachedConfig: Awaited<ReturnType<typeof getServerNftConfig>> | null = null;
+let configFetchTime = 0;
+const CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Singleton instances that depend on config
 let provider: ethers.JsonRpcProvider | null = null;
 let contract: ethers.Contract | null = null;
 let multicall: Multicall | null = null;
 let contractInterface: ethers.Interface | null = null;
 
-function getProvider(): ethers.JsonRpcProvider {
+async function getConfig() {
+  const now = Date.now();
+  if (!cachedConfig || now - configFetchTime > CONFIG_CACHE_TTL) {
+    cachedConfig = await getServerNftConfig();
+    configFetchTime = now;
+    // Reset singleton instances when config changes
+    provider = null;
+    contract = null;
+    multicall = null;
+  }
+  return cachedConfig;
+}
+
+async function getProvider(config?: Awaited<ReturnType<typeof getConfig>>): Promise<ethers.JsonRpcProvider> {
+  const cfg = config || await getConfig();
   if (!provider) {
-    provider = new ethers.JsonRpcProvider(RPC_URL);
+    provider = new ethers.JsonRpcProvider(cfg.RPC_URL);
   }
   return provider;
 }
 
-function getContract(): ethers.Contract {
+async function getContract(config?: Awaited<ReturnType<typeof getConfig>>): Promise<ethers.Contract> {
+  const cfg = config || await getConfig();
+  const providerInstance = await getProvider(cfg);
   if (!contract) {
-    contract = new ethers.Contract(CONTRACT_ADDRESS, ROTKI_SPONSORSHIP_ABI, getProvider());
+    contract = new ethers.Contract(cfg.CONTRACT_ADDRESS, ROTKI_SPONSORSHIP_ABI, providerInstance);
   }
   return contract;
 }
 
-function getMulticall(): Multicall {
+async function getMulticall(config?: Awaited<ReturnType<typeof getConfig>>): Promise<Multicall> {
+  const cfg = config || await getConfig();
+  const providerInstance = await getProvider(cfg);
   if (!multicall) {
-    multicall = new Multicall(getProvider());
+    multicall = new Multicall(providerInstance);
   }
   return multicall;
 }
@@ -44,6 +67,7 @@ function getContractInterface(): ethers.Interface {
 
 // Request validation schema
 const querySchema = z.object({
+  _t: z.string().optional(), // Timestamp for cache busting
   tierIds: z.string().optional().transform((val) => {
     if (!val)
       return [];
@@ -72,19 +96,24 @@ const fetchMetadata = defineCachedFunction(async (metadataURI: string): Promise<
 
 // Get current release ID with caching
 const getCurrentReleaseId = defineCachedFunction(async (): Promise<number> => {
-  const contract = getContract();
+  const config = await getConfig();
+  const contract = await getContract(config);
   const releaseId = await contract.currentReleaseId();
   return Number(releaseId);
 }, {
-  getKey: () => 'releaseId:current',
+  getKey: async () => {
+    const config = await getConfig();
+    return `releaseId:${config.CONTRACT_ADDRESS}:current`;
+  },
   maxAge: CACHE_TTL.RELEASE_ID,
   name: 'getCurrentReleaseId',
 });
 
-// Cached function for fetching single tier info
-const fetchSingleTierInfo = defineCachedFunction(async (tierId: number, releaseId: number): Promise<TierInfoResult | null> => {
+// Non-cached version of tier info fetching
+async function fetchSingleTierInfoDirect(tierId: number, releaseId: number): Promise<TierInfoResult | null> {
   try {
-    const contract = getContract();
+    const config = await getConfig();
+    const contract = await getContract(config);
     const [maxSupply, currentSupply, metadataURI] = await contract.getTierInfo(releaseId, tierId);
 
     if (!metadataURI) {
@@ -125,31 +154,43 @@ const fetchSingleTierInfo = defineCachedFunction(async (tierId: number, releaseI
     logger.error(`Error fetching tier ${tierId}:`, error);
     return null;
   }
-}, {
-  getKey: (tierId: number, releaseId: number) => `tier:${releaseId}:${tierId}`,
+}
+
+// Cached version of tier info fetching
+const fetchSingleTierInfo = defineCachedFunction(fetchSingleTierInfoDirect, {
+  getKey: async (tierId: number, releaseId: number) => {
+    const config = await getConfig();
+    return `tier:${config.CONTRACT_ADDRESS}:${releaseId}:${tierId}`;
+  },
   maxAge: CACHE_TTL.TIER_DATA,
   name: 'fetchSingleTierInfo',
 });
 
 // Batch fetch tier info using multicall
-async function fetchTierInfoBatch(tierIds: number[], releaseId: number): Promise<Record<number, TierInfoResult | null>> {
+async function fetchTierInfoBatch(tierIds: number[], releaseId: number, skipCache = false): Promise<Record<number, TierInfoResult | null>> {
   const results: Record<number, TierInfoResult | null> = {};
 
   // Check cache first by trying to fetch each tier
   const uncachedTierIds: number[] = [];
   const cachePromises = tierIds.map(async (tierId) => {
-    // Try to get from cache using the cached function
-    try {
-      const cached = await fetchSingleTierInfo(tierId, releaseId);
-      if (cached !== null) {
-        results[tierId] = cached;
+    if (skipCache) {
+      // Skip cache when force refreshing
+      uncachedTierIds.push(tierId);
+    }
+    else {
+      // Try to get from cache using the cached function
+      try {
+        const cached = await fetchSingleTierInfo(tierId, releaseId);
+        if (cached !== null) {
+          results[tierId] = cached;
+        }
+        else {
+          uncachedTierIds.push(tierId);
+        }
       }
-      else {
+      catch {
         uncachedTierIds.push(tierId);
       }
-    }
-    catch {
-      uncachedTierIds.push(tierId);
     }
   });
 
@@ -160,15 +201,16 @@ async function fetchTierInfoBatch(tierIds: number[], releaseId: number): Promise
   }
 
   try {
-    // Prepare multicall
-    const mc = getMulticall();
+    // Get config once and pass it to other functions
+    const config = await getConfig();
+    const mc = await getMulticall(config);
     const iface = getContractInterface();
 
     // Encode calls
     const calls = uncachedTierIds.map(tierId => ({
       allowFailure: true,
       callData: Multicall.encodeCall(iface, 'getTierInfo', [releaseId, tierId]),
-      target: CONTRACT_ADDRESS,
+      target: config.CONTRACT_ADDRESS,
     }));
 
     // Execute multicall
@@ -250,7 +292,9 @@ async function fetchTierInfoBatch(tierIds: number[], releaseId: number): Promise
     logger.error('Error in batch tier fetch:', error);
     // Fallback to individual fetches
     for (const tierId of uncachedTierIds) {
-      results[tierId] = await fetchSingleTierInfo(tierId, releaseId);
+      results[tierId] = skipCache
+        ? await fetchSingleTierInfoDirect(tierId, releaseId)
+        : await fetchSingleTierInfo(tierId, releaseId);
     }
     return results;
   }
@@ -259,14 +303,24 @@ async function fetchTierInfoBatch(tierIds: number[], releaseId: number): Promise
 export default defineEventHandler(async (event) => {
   try {
     // Validate query parameters
-    const query = await getValidatedQuery(event, querySchema.parse);
-    const { tierIds } = query;
+    const query = await getValidatedQuery(event, query => querySchema.parse(query));
+    const { _t, tierIds } = query;
 
-    // Set cache headers
-    setResponseHeaders(event, {
-      'Cache-Control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=600',
-      'Content-Type': 'application/json',
-    });
+    // Set cache headers - disable caching if _t parameter is present (cache busting)
+    if (_t) {
+      setResponseHeaders(event, {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Content-Type': 'application/json',
+        'Expires': '0',
+        'Pragma': 'no-cache',
+      });
+    }
+    else {
+      setResponseHeaders(event, {
+        'Cache-Control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=600',
+        'Content-Type': 'application/json',
+      });
+    }
 
     // If no specific tier IDs requested, return empty result
     if (!tierIds || tierIds.length === 0) {
@@ -287,12 +341,15 @@ export default defineEventHandler(async (event) => {
 
     if (useMulticall) {
       // Use multicall for batch fetching
-      tiers = await fetchTierInfoBatch(tierIds, releaseId);
+      tiers = await fetchTierInfoBatch(tierIds, releaseId, !!_t);
     }
     else {
       // Single tier fetch
       const tierPromises = tierIds.map(async (tierId) => {
-        const data = await fetchSingleTierInfo(tierId, releaseId);
+        // Use direct fetch when cache busting, otherwise use cached version
+        const data = _t
+          ? await fetchSingleTierInfoDirect(tierId, releaseId)
+          : await fetchSingleTierInfo(tierId, releaseId);
         return { data, tierId };
       });
 

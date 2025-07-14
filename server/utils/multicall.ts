@@ -33,7 +33,8 @@ export class Multicall {
       target: call.target,
     }));
 
-    const results = await this.contract.aggregate3(formattedCalls);
+    // Use staticCall to ensure this is a read-only call
+    const results = await this.contract.aggregate3.staticCall(formattedCalls);
     return results;
   }
 

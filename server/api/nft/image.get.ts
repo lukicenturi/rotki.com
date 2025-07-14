@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 import { z } from 'zod';
-import { IPFS_URL } from '~/composables/rotki-sponsorship/constants';
+import { IPFS_URL } from '~/composables/rotki-sponsorship/config';
 import { CACHE_TTL } from '~/server/utils/cache';
 import { useLogger } from '~/utils/use-logger';
 
@@ -16,8 +16,8 @@ interface ImageCacheEntry {
 const querySchema = z.object({
   url: z.string().url().refine(
     url =>
-      // Only allow IPFS URLs or our configured IPFS gateway
-      url.startsWith('ipfs://') || url.startsWith(IPFS_URL),
+      // Only allow IPFS URLs
+      url.startsWith('ipfs://') || url.includes('gateway.pinata.cloud/ipfs/'),
     {
       message: 'Only IPFS URLs are allowed',
     },

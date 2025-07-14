@@ -1,9 +1,3 @@
-export const CONTRACT_ADDRESS = '0x9C4Ac51128b3B29c8c4C76c960a07c17b8290557';
-
-export const CHAIN_ID = 11155111; // Sepolia testnet
-
-export const RPC_URL = 'https://sepolia.gateway.tenderly.co';
-
 export const IPFS_URL = 'https://gateway.pinata.cloud/ipfs/';
 
 // Payment token addresses

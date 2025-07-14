@@ -1,5 +1,6 @@
 import type { PaymentToken } from '~/composables/rotki-sponsorship/types';
 import { get, set } from '@vueuse/core';
+import { ETH_ADDRESS } from '~/composables/rotki-sponsorship/config';
 import { useLogger } from '~/utils/use-logger';
 
 export function usePaymentTokens() {
@@ -35,7 +36,19 @@ export function usePaymentTokens() {
 
     try {
       const response = await $fetch<PaymentToken[]>('/webapi/nfts/payment-tokens/');
-      set(paymentTokens, response);
+
+      // Sort tokens to ensure ETH appears first
+      const sortedTokens = [...response].sort((a, b) => {
+        // ETH should always be first
+        if (a.address === ETH_ADDRESS)
+          return -1;
+        if (b.address === ETH_ADDRESS)
+          return 1;
+        // Keep the original order for other tokens
+        return 0;
+      });
+
+      set(paymentTokens, sortedTokens);
       logger.info(`Fetched ${response.length} payment tokens`);
     }
     catch (error_) {

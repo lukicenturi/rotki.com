@@ -2,7 +2,9 @@
 import { get, set } from '@vueuse/core';
 import { computed, onMounted, ref } from 'vue';
 import { z } from 'zod';
+import { useLeaderboardMetadata } from '~/composables/use-leaderboard-metadata';
 import { fetchWithCsrf } from '~/utils/api';
+import { formatDate } from '~/utils/date';
 import { commonAttrs, getMetadata } from '~/utils/metadata';
 
 const description = 'rotki\'s sponsor leaderboard';
@@ -47,6 +49,9 @@ const { copy } = useClipboard({ source: clipboardSource });
 
 // i18n
 const { t } = useI18n({ useScope: 'global' });
+
+// Leaderboard metadata
+const { lastUpdated, fetchMetadata } = useLeaderboardMetadata();
 
 const LeaderboardEntry = z.object({
   rank: z.number().nullable(),
@@ -144,7 +149,10 @@ async function handlePaginationChange(newPagination: PaginationData): Promise<vo
 }
 
 onMounted(async () => {
-  await fetchLeaderboard();
+  await Promise.all([
+    fetchLeaderboard(),
+    fetchMetadata(),
+  ]);
 });
 </script>
 
@@ -222,9 +230,9 @@ onMounted(async () => {
                   </div>
                   <div class="text-rui-text-secondary text-sm space-y-1">
                     <div class="flex gap-4">
-                      <span>{{ t('sponsor.leaderboard.nft_counts.bronze', { count: user.bronzeCount }) }}</span>
-                      <span>{{ t('sponsor.leaderboard.nft_counts.silver', { count: user.silverCount }) }}</span>
                       <span>{{ t('sponsor.leaderboard.nft_counts.gold', { count: user.goldCount }) }}</span>
+                      <span>{{ t('sponsor.leaderboard.nft_counts.silver', { count: user.silverCount }) }}</span>
+                      <span>{{ t('sponsor.leaderboard.nft_counts.bronze', { count: user.bronzeCount }) }}</span>
                     </div>
                     <div class="flex items-center gap-2">
                       <RuiTooltip :open-delay="400">
@@ -279,7 +287,7 @@ onMounted(async () => {
         </RuiCard>
 
         <p class="text-xs text-rui-text-secondary mt-2 italic">
-          {{ t('sponsor.leaderboard.updated_every_hour') }}
+          {{ lastUpdated ? t('sponsor.leaderboard.last_updated', { date: formatDate(lastUpdated, 'MMMM DD, YYYY HH:mm z') }) : t('sponsor.leaderboard.updated_every_hour') }}
         </p>
 
         <!-- Pagination -->

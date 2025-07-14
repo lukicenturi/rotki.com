@@ -5,19 +5,21 @@ import { refreshSupplyData } from '~/composables/rotki-sponsorship/contract';
 import { usePaymentTokens } from '~/composables/rotki-sponsorship/use-payment-tokens';
 import { findTierById } from '~/composables/rotki-sponsorship/utils';
 import { useLogger } from '~/utils/use-logger';
-import { CHAIN_ID, CONTRACT_ADDRESS, ERC20_ABI, ETH_ADDRESS, ROTKI_SPONSORSHIP_ABI } from './constants';
+import { ERC20_ABI, ETH_ADDRESS, ROTKI_SPONSORSHIP_ABI, useNftConfig } from './config';
 
 async function approveTokenContract(tokenAddress: string, amount: string, decimals: number, signer: Signer): Promise<TransactionResponse> {
+  const { CONTRACT_ADDRESS } = useNftConfig();
   const tokenContract = new Contract(tokenAddress, ERC20_ABI, signer);
   const amountBN = ethers.parseUnits(amount, decimals);
-  return tokenContract.approve(CONTRACT_ADDRESS, amountBN);
+  return tokenContract.approve(get(CONTRACT_ADDRESS), amountBN);
 }
 
 async function checkTokenAllowanceContract(tokenAddress: string, decimals: number, signer: Signer): Promise<string> {
+  const { CONTRACT_ADDRESS } = useNftConfig();
   const userAddress = await signer.getAddress();
   const tokenContract = new Contract(tokenAddress, ERC20_ABI, signer);
 
-  const allowance = await tokenContract.allowance(userAddress, CONTRACT_ADDRESS);
+  const allowance = await tokenContract.allowance(userAddress, get(CONTRACT_ADDRESS));
   return ethers.formatUnits(allowance, decimals);
 }
 
@@ -28,7 +30,8 @@ async function mintNFT(
   decimals: number,
   signer: Signer,
 ): Promise<TransactionResponse> {
-  const contract = new Contract(CONTRACT_ADDRESS, ROTKI_SPONSORSHIP_ABI, signer);
+  const { CONTRACT_ADDRESS } = useNftConfig();
+  const contract = new Contract(get(CONTRACT_ADDRESS), ROTKI_SPONSORSHIP_ABI, signer);
 
   let tx: TransactionResponse;
 
@@ -56,15 +59,16 @@ async function mintNFT(
 export function useRotkiSponsorshipPayment() {
   const sponsorshipState = ref<SponsorshipState>({ status: 'idle' });
   const selectedCurrency = ref<string>('ETH');
-  const isLoading = ref<boolean>(true);
+  const isLoadingPaymentTokens = ref<boolean>(true);
   const error = ref<string | null>(null);
 
   const logger = useLogger('rotki-sponsorship');
   const { t } = useI18n({ useScope: 'global' });
   const { fetchPaymentTokens, getPriceForTier, getTokenBySymbol, paymentTokens } = usePaymentTokens();
+  const { CHAIN_ID } = useNftConfig();
 
   const connection = useWeb3Connection({
-    chainId: CHAIN_ID,
+    chainId: get(CHAIN_ID),
     onAccountChange: (isConnected) => {
       if (!isConnected) {
         set(sponsorshipState, { status: 'idle' });
@@ -85,7 +89,7 @@ export function useRotkiSponsorshipPayment() {
 
   const transactionUrl = computed(() => {
     const state = get(sponsorshipState);
-    const network = getNetwork(CHAIN_ID);
+    const network = getNetwork(get(CHAIN_ID));
     const explorerUrl = network.blockExplorers?.default.url;
 
     if (state.txHash && explorerUrl) {
@@ -98,6 +102,7 @@ export function useRotkiSponsorshipPayment() {
   async function loadPaymentTokens() {
     try {
       logger.info('Loading payment tokens...');
+      set(isLoadingPaymentTokens, true);
       await fetchPaymentTokens();
 
       const tokens = get(paymentTokens);
@@ -112,6 +117,9 @@ export function useRotkiSponsorshipPayment() {
     catch (error_) {
       logger.error('Error loading payment tokens:', error_);
       set(error, 'Failed to load payment options');
+    }
+    finally {
+      set(isLoadingPaymentTokens, false);
     }
   }
 
@@ -223,7 +231,7 @@ export function useRotkiSponsorshipPayment() {
     error: readonly(error),
     getPriceForTier,
     isExpectedChain,
-    isLoading: readonly(isLoading),
+    isLoadingPaymentTokens: readonly(isLoadingPaymentTokens),
     loadPaymentTokens,
     mintSponsorshipNFT,
     paymentTokens,

@@ -20,13 +20,13 @@ export function useRotkiSponsorshipSSR() {
 
   const isTierAvailable = (tierKey: string): boolean => isTierAvailableUtil(tierKey, get(tierSupply));
 
-  async function loadAll(): Promise<void> {
+  async function loadAll(forceRefresh = false): Promise<void> {
     set(isLoading, true);
     set(error, null);
 
     try {
       // Load tier data from server API (includes images, supply, benefits)
-      const { benefits, images, releaseName: fetchedReleaseName, supplies } = await loadNFTImagesAndSupplySSR(SPONSORSHIP_TIERS);
+      const { benefits, images, releaseName: fetchedReleaseName, supplies } = await loadNFTImagesAndSupplySSR(SPONSORSHIP_TIERS, forceRefresh);
 
       set(nftImages, images);
       set(tierSupply, supplies);
@@ -66,9 +66,16 @@ export function useRotkiSponsorshipSSR() {
  */
 export async function useSponsorshipData() {
   const ssr = useRotkiSponsorshipSSR();
+  const forceRefresh = ref(false);
+  const route = useRoute();
 
-  const { data, error, pending } = await useLazyAsyncData('sponsorship-data', async () => {
-    await ssr.loadAll();
+  // Use a key that includes the route path to ensure fresh data on navigation
+  const dataKey = `sponsorship-data-${route.path}`;
+
+  const { data, error, pending, refresh: refreshData } = await useAsyncData(dataKey, async () => {
+    await ssr.loadAll(get(forceRefresh));
+    // Reset force refresh flag after use
+    set(forceRefresh, false);
     return {
       error: get(ssr.error),
       nftImages: get(ssr.nftImages),
@@ -76,12 +83,24 @@ export async function useSponsorshipData() {
       tierBenefits: get(ssr.tierBenefits),
       tierSupply: get(ssr.tierSupply),
     };
+  }, {
+    // This will ensure data is fetched fresh on each navigation
+    watch: [() => route.path],
   });
 
-  // Return the data with the correct loading state from useLazyAsyncData
+  // Create a custom refresh function that forces cache bypass
+  async function refresh() {
+    // Set force refresh flag before refreshing
+    set(forceRefresh, true);
+    // Force refresh the data through useAsyncData
+    await refreshData();
+  }
+
+  // Return the data with the correct loading state from useAsyncData
   return {
     data,
     error,
     pending,
+    refresh,
   };
 }
