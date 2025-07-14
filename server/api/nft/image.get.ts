@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 import { z } from 'zod';
-import { IPFS_URL } from '~/composables/rotki-sponsorship/config';
+import { IPFS_URL } from '~/composables/rotki-sponsorship/constants';
 import { CACHE_TTL } from '~/server/utils/cache';
 import { useLogger } from '~/utils/use-logger';
 

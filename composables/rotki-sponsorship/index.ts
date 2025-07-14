@@ -14,7 +14,7 @@ export function useRotkiSponsorshipSSR() {
   const nftImages = ref<Record<string, string>>({});
   const releaseName = ref<string>('');
   const isLoading = ref<boolean>(false);
-  const error = ref<string | null>(null);
+  const error = ref<string>();
 
   const logger = useLogger('rotki-sponsorship-ssr');
 
@@ -22,7 +22,7 @@ export function useRotkiSponsorshipSSR() {
 
   async function loadAll(forceRefresh = false): Promise<void> {
     set(isLoading, true);
-    set(error, null);
+    set(error, undefined);
 
     try {
       // Load tier data from server API (includes images, supply, benefits)

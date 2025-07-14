@@ -4,7 +4,7 @@ const CACHE_SIZE = 100;
 
 interface UseBlockieReturn {
   cache: Map<string, string>;
-  getBlockie: (address?: string | null) => string;
+  getBlockie: (address?: string) => string;
 }
 
 export const useBlockie = createSharedComposable((): UseBlockieReturn => {
@@ -23,7 +23,7 @@ export const useBlockie = createSharedComposable((): UseBlockieReturn => {
     cache.set(address, image);
   };
 
-  const getBlockie = (address: string | null = ''): string => {
+  const getBlockie = (address: string = ''): string => {
     if (!address)
       return '';
 

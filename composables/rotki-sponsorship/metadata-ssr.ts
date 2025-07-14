@@ -5,15 +5,15 @@ import { useLogger } from '~/utils/use-logger';
 const logger = useLogger('rotki-sponsorship-metadata-ssr');
 
 interface TierInfoResponse {
-  tiers: Record<number, TierInfoResult | null>;
-  releaseId: number | null;
+  tiers: Record<number, TierInfoResult | undefined>;
+  releaseId: number | undefined;
   cached: boolean;
 }
 
 /**
  * SSR-compatible version of fetchTierInfo that uses the server API
  */
-export async function fetchTierInfoSSR(tierId: number, tierKey: string): Promise<TierInfoResult | null> {
+export async function fetchTierInfoSSR(tierId: number, tierKey: string): Promise<TierInfoResult | undefined> {
   try {
     const response = await $fetch<TierInfoResponse>('/api/nft/tier-info', {
       params: {
@@ -21,11 +21,11 @@ export async function fetchTierInfoSSR(tierId: number, tierKey: string): Promise
       },
     });
 
-    return response.tiers[tierId] || null;
+    return response.tiers[tierId];
   }
   catch (error) {
     logger.error(`Error fetching tier info for ${tierKey}:`, error);
-    return null;
+    return undefined;
   }
 }
 

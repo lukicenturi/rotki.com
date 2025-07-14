@@ -1,7 +1,8 @@
 import { get } from '@vueuse/shared';
 import { ethers } from 'ethers';
 import { useLogger } from '~/utils/use-logger';
-import { ROTKI_SPONSORSHIP_ABI, useNftConfig } from './config';
+import { useNftConfig } from './config';
+import { ROTKI_SPONSORSHIP_ABI } from './constants';
 import { SPONSORSHIP_TIERS, type TierSupply } from './types';
 
 const logger = useLogger('rotki-sponsorship-contract');

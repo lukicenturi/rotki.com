@@ -5,7 +5,8 @@ import { refreshSupplyData } from '~/composables/rotki-sponsorship/contract';
 import { usePaymentTokens } from '~/composables/rotki-sponsorship/use-payment-tokens';
 import { findTierById } from '~/composables/rotki-sponsorship/utils';
 import { useLogger } from '~/utils/use-logger';
-import { ERC20_ABI, ETH_ADDRESS, ROTKI_SPONSORSHIP_ABI, useNftConfig } from './config';
+import { useNftConfig } from './config';
+import { ERC20_ABI, ETH_ADDRESS, ROTKI_SPONSORSHIP_ABI } from './constants';
 
 async function approveTokenContract(tokenAddress: string, amount: string, decimals: number, signer: Signer): Promise<TransactionResponse> {
   const { CONTRACT_ADDRESS } = useNftConfig();
@@ -60,7 +61,7 @@ export function useRotkiSponsorshipPayment() {
   const sponsorshipState = ref<SponsorshipState>({ status: 'idle' });
   const selectedCurrency = ref<string>('ETH');
   const isLoadingPaymentTokens = ref<boolean>(true);
-  const error = ref<string | null>(null);
+  const error = ref<string>();
 
   const logger = useLogger('rotki-sponsorship');
   const { t } = useI18n({ useScope: 'global' });
@@ -146,7 +147,7 @@ export function useRotkiSponsorshipPayment() {
       if (!tier) {
         throw new Error(`Invalid tier ID: ${tierId}`);
       }
-      const tierKey = tier.key as 'bronze' | 'silver' | 'gold';
+      const tierKey = tier.key;
 
       // Get price from payment token
       const price = token.prices[tierKey];

@@ -1,5 +1,7 @@
+export type TierKey = 'bronze' | 'silver' | 'gold';
+
 export interface SponsorshipTier {
-  key: string;
+  key: TierKey;
   label: string;
   tierId: number;
 }
@@ -26,11 +28,7 @@ export interface PaymentToken {
   address: string;
   decimals: number;
   icon: string;
-  prices: {
-    bronze: string;
-    silver: string;
-    gold: string;
-  };
+  prices: Record<TierKey, string>;
   icon_url: string;
 }
 

@@ -5,24 +5,15 @@ import { useBlockie } from '~/composables/use-blockie';
 interface Props {
   ensName?: string | null;
   address: string;
-  size?: 'sm' | 'md' | 'lg';
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  size: 'md',
-});
+const props = defineProps<Props>();
 
-const avatarUrl = ref<string | null>(null);
+const avatarUrl = ref<string>();
 const loading = ref<boolean>(false);
 const hasError = ref<boolean>(false);
 
 const { getBlockie } = useBlockie();
-
-const sizeClasses = computed(() => ({
-  sm: 'w-8 h-8',
-  md: 'w-10 h-10',
-  lg: 'w-12 h-12',
-}[props.size]));
 
 // Get blockie for the address
 const blockieUrl = computed(() => getBlockie(props.address));
@@ -47,8 +38,7 @@ async function fetchAvatar() {
       set(hasError, true);
     }
   }
-  catch (error) {
-    console.warn('Failed to fetch ENS avatar:', error);
+  catch {
     set(hasError, true);
   }
   finally {
@@ -67,14 +57,12 @@ watch(() => props.ensName, () => {
 </script>
 
 <template>
-  <div
-    class="relative rounded-full overflow-hidden shrink-0"
-    :class="sizeClasses"
-  >
+  <div class="relative rounded-full overflow-hidden shrink-0 size-10">
     <!-- Loading state for ENS avatar -->
-    <div
+    <RuiSkeletonLoader
       v-if="loading && ensName"
-      class="absolute inset-0 bg-rui-grey-200 animate-pulse"
+      rounded="full"
+      class="w-full h-full"
     />
 
     <!-- ENS Avatar image -->

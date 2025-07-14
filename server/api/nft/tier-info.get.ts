@@ -1,7 +1,8 @@
 import type { TierInfoResult } from '~/composables/rotki-sponsorship/metadata';
 import { ethers } from 'ethers';
 import { z } from 'zod';
-import { getServerNftConfig, IPFS_URL, ROTKI_SPONSORSHIP_ABI } from '~/composables/rotki-sponsorship/config';
+import { getServerNftConfig } from '~/composables/rotki-sponsorship/config';
+import { IPFS_URL, ROTKI_SPONSORSHIP_ABI } from '~/composables/rotki-sponsorship/constants';
 import { CACHE_TTL } from '~/server/utils/cache';
 import { Multicall } from '~/server/utils/multicall';
 import { useLogger } from '~/utils/use-logger';
@@ -9,25 +10,24 @@ import { useLogger } from '~/utils/use-logger';
 const logger = useLogger('nft-tier-info-api');
 
 // Cached config
-let cachedConfig: Awaited<ReturnType<typeof getServerNftConfig>> | null = null;
+let cachedConfig: Awaited<ReturnType<typeof getServerNftConfig>> | undefined;
 let configFetchTime = 0;
-const CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // Singleton instances that depend on config
-let provider: ethers.JsonRpcProvider | null = null;
-let contract: ethers.Contract | null = null;
-let multicall: Multicall | null = null;
-let contractInterface: ethers.Interface | null = null;
+let provider: ethers.JsonRpcProvider | undefined;
+let contract: ethers.Contract | undefined;
+let multicall: Multicall | undefined;
+let contractInterface: ethers.Interface | undefined;
 
 async function getConfig() {
   const now = Date.now();
-  if (!cachedConfig || now - configFetchTime > CONFIG_CACHE_TTL) {
+  if (!cachedConfig || now - configFetchTime > CACHE_TTL.CONFIG * 1000) {
     cachedConfig = await getServerNftConfig();
     configFetchTime = now;
     // Reset singleton instances when config changes
-    provider = null;
-    contract = null;
-    multicall = null;
+    provider = undefined;
+    contract = undefined;
+    multicall = undefined;
   }
   return cachedConfig;
 }
@@ -110,14 +110,14 @@ const getCurrentReleaseId = defineCachedFunction(async (): Promise<number> => {
 });
 
 // Non-cached version of tier info fetching
-async function fetchSingleTierInfoDirect(tierId: number, releaseId: number): Promise<TierInfoResult | null> {
+async function fetchSingleTierInfoDirect(tierId: number, releaseId: number): Promise<TierInfoResult | undefined> {
   try {
     const config = await getConfig();
     const contract = await getContract(config);
     const [maxSupply, currentSupply, metadataURI] = await contract.getTierInfo(releaseId, tierId);
 
     if (!metadataURI) {
-      return null;
+      return undefined;
     }
 
     // Fetch metadata (with its own caching)
@@ -152,7 +152,7 @@ async function fetchSingleTierInfoDirect(tierId: number, releaseId: number): Pro
   }
   catch (error) {
     logger.error(`Error fetching tier ${tierId}:`, error);
-    return null;
+    return undefined;
   }
 }
 
@@ -167,8 +167,8 @@ const fetchSingleTierInfo = defineCachedFunction(fetchSingleTierInfoDirect, {
 });
 
 // Batch fetch tier info using multicall
-async function fetchTierInfoBatch(tierIds: number[], releaseId: number, skipCache = false): Promise<Record<number, TierInfoResult | null>> {
-  const results: Record<number, TierInfoResult | null> = {};
+async function fetchTierInfoBatch(tierIds: number[], releaseId: number, skipCache = false): Promise<Record<number, TierInfoResult | undefined>> {
+  const results: Record<number, TierInfoResult | undefined> = {};
 
   // Check cache first by trying to fetch each tier
   const uncachedTierIds: number[] = [];
@@ -181,7 +181,7 @@ async function fetchTierInfoBatch(tierIds: number[], releaseId: number, skipCach
       // Try to get from cache using the cached function
       try {
         const cached = await fetchSingleTierInfo(tierId, releaseId);
-        if (cached !== null) {
+        if (cached !== undefined) {
           results[tierId] = cached;
         }
         else {
@@ -223,7 +223,7 @@ async function fetchTierInfoBatch(tierIds: number[], releaseId: number, skipCach
       const result = multicallResults[i];
 
       if (!result.success) {
-        results[tierId] = null;
+        results[tierId] = undefined;
         continue;
       }
 
@@ -235,7 +235,7 @@ async function fetchTierInfoBatch(tierIds: number[], releaseId: number, skipCach
         );
 
         if (!metadataURI) {
-          results[tierId] = null;
+          results[tierId] = undefined;
           continue;
         }
 
@@ -273,13 +273,13 @@ async function fetchTierInfoBatch(tierIds: number[], releaseId: number, skipCach
             // Cache will be handled by the defineCachedFunction when called next time
           }).catch((error) => {
             logger.error(`Error fetching metadata for tier ${tierId}:`, error);
-            results[tierId] = null;
+            results[tierId] = undefined;
           }),
         );
       }
       catch (error) {
         logger.error(`Error decoding tier ${tierId} data:`, error);
-        results[tierId] = null;
+        results[tierId] = undefined;
       }
     }
 
@@ -326,7 +326,7 @@ export default defineEventHandler(async (event) => {
     if (!tierIds || tierIds.length === 0) {
       return {
         cached: false,
-        releaseId: null,
+        releaseId: undefined,
         tiers: {},
       };
     }
@@ -337,7 +337,7 @@ export default defineEventHandler(async (event) => {
     // Check if we can use multicall for batch operations
     const useMulticall = tierIds.length > 1;
 
-    let tiers: Record<number, TierInfoResult | null> = {};
+    let tiers: Record<number, TierInfoResult | undefined> = {};
 
     if (useMulticall) {
       // Use multicall for batch fetching

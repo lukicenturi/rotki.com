@@ -6,6 +6,7 @@ import { useLeaderboardMetadata } from '~/composables/use-leaderboard-metadata';
 import { fetchWithCsrf } from '~/utils/api';
 import { formatDate } from '~/utils/date';
 import { commonAttrs, getMetadata } from '~/utils/metadata';
+import { useLogger } from '~/utils/use-logger';
 
 const description = 'rotki\'s sponsor leaderboard';
 
@@ -25,8 +26,10 @@ definePageMeta({
   layout: 'sponsor',
 });
 
+const logger = useLogger();
+
 const loading = ref<boolean>(false);
-const leaderboardData = ref<LeaderboardResponse | null>(null);
+const leaderboardData = ref<LeaderboardResponse>();
 
 interface PaginationData {
   page: number;
@@ -64,7 +67,7 @@ const LeaderboardEntry = z.object({
   goldCount: z.number(),
   totalCount: z.number(),
   points: z.number(),
-  ensName: z.string().nullable().optional(),
+  ensName: z.string().nullable(),
 });
 
 const LeaderboardResponse = z.object({
@@ -108,7 +111,7 @@ async function fetchLeaderboard(): Promise<void> {
     });
   }
   catch (error_) {
-    console.error('Error fetching leaderboard:', error_);
+    logger.error('Error fetching leaderboard:', error_);
   }
   finally {
     set(loading, false);
@@ -117,7 +120,7 @@ async function fetchLeaderboard(): Promise<void> {
 
 function formatAddressDisplay(holder: LeaderboardEntry): {
   primary: string;
-  secondary: null;
+  secondary: undefined;
   showTooltip: boolean;
   isEns: boolean;
 } {
@@ -126,14 +129,14 @@ function formatAddressDisplay(holder: LeaderboardEntry): {
   if (holder.ensName) {
     return {
       primary: `${holder.ensName} - ${shortenAddress(holder.address)}`,
-      secondary: null,
+      secondary: undefined,
       showTooltip: true,
       isEns: true,
     };
   }
   return {
     primary: shouldShorten ? shortenAddress(holder.address) : holder.address,
-    secondary: null,
+    secondary: undefined,
     showTooltip: shouldShorten,
     isEns: false,
   };
@@ -206,7 +209,6 @@ onMounted(async () => {
                 <AddressAvatar
                   :ens-name="user.ensName"
                   :address="user.address"
-                  size="md"
                 />
 
                 <div class="flex-1">

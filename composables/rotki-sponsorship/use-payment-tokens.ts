@@ -1,12 +1,12 @@
-import type { PaymentToken } from '~/composables/rotki-sponsorship/types';
+import type { PaymentToken, TierKey } from '~/composables/rotki-sponsorship/types';
 import { get, set } from '@vueuse/core';
-import { ETH_ADDRESS } from '~/composables/rotki-sponsorship/config';
+import { ETH_ADDRESS } from '~/composables/rotki-sponsorship/constants';
 import { useLogger } from '~/utils/use-logger';
 
 export function usePaymentTokens() {
   const paymentTokens = ref<PaymentToken[]>([]);
   const isLoading = ref<boolean>(false);
-  const error = ref<string | null>(null);
+  const error = ref<string>();
 
   const logger = useLogger('payment-tokens');
 
@@ -32,7 +32,7 @@ export function usePaymentTokens() {
 
   async function fetchPaymentTokens(): Promise<void> {
     set(isLoading, true);
-    set(error, null);
+    set(error, undefined);
 
     try {
       const response = await $fetch<PaymentToken[]>('/webapi/nfts/payment-tokens/');
@@ -63,7 +63,7 @@ export function usePaymentTokens() {
 
   const getTokenBySymbol = computed<(symbol: string) => PaymentToken | undefined>(() => (symbol: string) => get(paymentTokens).find(token => token.symbol === symbol));
 
-  const getPriceForTier = computed<(symbol: string, tier: 'bronze' | 'silver' | 'gold') => string | undefined>(() => (symbol: string, tier: 'bronze' | 'silver' | 'gold') => {
+  const getPriceForTier = computed<(symbol: string, tier: TierKey) => string | undefined>(() => (symbol: string, tier: TierKey) => {
     const token = get(getTokenBySymbol)(symbol);
     const price = token?.prices[tier];
     return price ? formatPrice(price) : undefined;

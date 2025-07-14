@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { get, set } from '@vueuse/core';
 import { useSponsorshipData } from '~/composables/rotki-sponsorship';
-import { ETH_ADDRESS } from '~/composables/rotki-sponsorship/config';
+import { ETH_ADDRESS } from '~/composables/rotki-sponsorship/constants';
 import { useRotkiSponsorshipPayment } from '~/composables/rotki-sponsorship/payment';
-import { SPONSORSHIP_TIERS } from '~/composables/rotki-sponsorship/types';
+import { SPONSORSHIP_TIERS, type TierKey } from '~/composables/rotki-sponsorship/types';
 import { findTierByKey, isTierAvailable } from '~/composables/rotki-sponsorship/utils';
 import { useLeaderboardMetadata } from '~/composables/use-leaderboard-metadata';
 import { commonAttrs, getMetadata } from '~/utils/metadata';
+import { useLogger } from '~/utils/use-logger';
 
 const description = 'Sponsor rotki\'s next release';
 
@@ -25,6 +26,8 @@ useHead({
 definePageMeta({
   layout: 'sponsor',
 });
+
+const logger = useLogger();
 
 const selectedTier = ref('bronze');
 const isApproving = ref<boolean>(false);
@@ -59,7 +62,7 @@ const nftImages = computed(() => get(sponsorshipData)?.nftImages || {});
 const tierSupply = computed(() => get(sponsorshipData)?.tierSupply || {});
 const tierBenefits = computed(() => get(sponsorshipData)?.tierBenefits || {});
 const releaseName = computed(() => get(sponsorshipData)?.releaseName || '');
-const error = computed(() => get(sponsorshipData)?.error || null);
+const error = computed(() => get(sponsorshipData)?.error);
 
 async function handleApprove() {
   try {
@@ -73,7 +76,7 @@ async function handleApprove() {
     if (!token || !token.prices)
       return;
 
-    const price = token.prices[tier.key as 'bronze' | 'silver' | 'gold'];
+    const price = token.prices[tier.key];
     if (!price)
       return;
 
@@ -85,7 +88,7 @@ async function handleApprove() {
     set(tokenAllowance, newAllowance);
   }
   catch (error) {
-    console.error('Approval failed:', error);
+    logger.error('Approval failed:', error);
   }
   finally {
     set(isApproving, false);
@@ -101,7 +104,7 @@ async function handleMint() {
     await mintSponsorshipNFT(tier.tierId, get(selectedCurrency));
   }
   catch (error) {
-    console.error('Minting failed:', error);
+    logger.error('Minting failed:', error);
   }
 }
 
@@ -112,7 +115,7 @@ const needsApproval = computed<boolean>(() => {
   if (!token || token.address === ETH_ADDRESS)
     return false;
 
-  const selectedTierKey = get(selectedTier) as 'bronze' | 'silver' | 'gold';
+  const selectedTierKey = get(selectedTier) as TierKey;
   const price = token.prices[selectedTierKey];
   const allowance = get(tokenAllowance);
 
@@ -160,6 +163,26 @@ const isButtonDisabled = computed(() => {
 
 const availableTokens = computed(() => get(paymentTokens));
 
+const tierPriceDisplay = computed<Record<string, string>>(() => {
+  const result: Record<string, string> = {};
+  const currency = get(selectedCurrency);
+
+  if (get(isLoadingPaymentTokens)) {
+    SPONSORSHIP_TIERS.forEach((tier) => {
+      result[tier.key] = t('sponsor.sponsor_page.pricing.loading');
+    });
+    return result;
+  }
+
+  const priceGetter = get(getPriceForTier);
+  SPONSORSHIP_TIERS.forEach((tier) => {
+    const price = priceGetter(currency, tier.key);
+    result[tier.key] = price ? `${price} ${currency}` : t('sponsor.sponsor_page.pricing.loading');
+  });
+
+  return result;
+});
+
 async function checkAllowanceIfNeeded() {
   const currency = get(selectedCurrency);
   const token = get(paymentTokens).find(t => t.symbol === currency);
@@ -170,7 +193,7 @@ async function checkAllowanceIfNeeded() {
       set(tokenAllowance, allowance);
     }
     catch (error) {
-      console.error('Failed to check token allowance:', error);
+      logger.error('Failed to check token allowance:', error);
     }
   }
 }
@@ -239,7 +262,6 @@ onMounted(async () => {
                 :src="nftImages[selectedTier]"
                 :alt="t('sponsor.sponsor_page.nft_image.alt', { tier: findTierByKey(selectedTier)?.label })"
                 class="w-full h-full object-cover rounded-lg"
-                @error="console.warn('Image failed to load')"
               />
             </div>
             <div
@@ -348,13 +370,7 @@ onMounted(async () => {
                 />
                 <div class="flex flex-col items-end">
                   <div class="text-lg font-bold text-rui-primary">
-                    {{ (() => {
-                      if (isLoadingPaymentTokens) {
-                        return t('sponsor.sponsor_page.pricing.loading');
-                      }
-                      const price = get(getPriceForTier)(selectedCurrency, tier.key as 'bronze' | 'silver' | 'gold');
-                      return price ? `${price} ${selectedCurrency}` : t('sponsor.sponsor_page.pricing.loading');
-                    })() }}
+                    {{ tierPriceDisplay[tier.key] }}
                   </div>
                   <div
                     v-if="tierSupply[tier.key]"
