@@ -6,6 +6,7 @@ import { useRotkiSponsorshipPayment } from '~/composables/rotki-sponsorship/paym
 import { SPONSORSHIP_TIERS, type TierKey } from '~/composables/rotki-sponsorship/types';
 import { findTierByKey, isTierAvailable } from '~/composables/rotki-sponsorship/utils';
 import { useLeaderboardMetadata } from '~/composables/use-leaderboard-metadata';
+import { fetchWithCsrf } from '~/utils/api';
 import { commonAttrs, getMetadata } from '~/utils/metadata';
 import { useLogger } from '~/utils/use-logger';
 
@@ -202,9 +203,21 @@ watch(selectedCurrency, checkAllowanceIfNeeded);
 watch(connected, checkAllowanceIfNeeded);
 
 // Function to call after successful minting
-// eslint-disable-next-line unused-imports/no-unused-vars
-async function onMintingSuccess(transactionHash: string) {
-  // TODO: call the endpoint to update the leaderboard
+async function onMintingSuccess(txHash: string) {
+  try {
+    // Call the endpoint to monitor the transaction
+    await fetchWithCsrf('/webapi/nfts/monitor-tx/', {
+      method: 'POST',
+      body: {
+        txHash,
+      },
+    });
+
+    logger.info(`Transaction monitoring started for: ${txHash}`);
+  }
+  catch (error) {
+    logger.error('Failed to start transaction monitoring:', error);
+  }
 }
 
 // Show success dialog when minting is successful

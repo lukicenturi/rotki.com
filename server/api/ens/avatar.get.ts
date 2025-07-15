@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { IPFS_URL } from '~/composables/rotki-sponsorship/constants';
 import { CACHE_TTL } from '~/server/utils/cache';
 import { createImageCacheKey } from '~/server/utils/cache-keys';
 import { handleApiError } from '~/server/utils/errors';
@@ -7,45 +6,28 @@ import { handleConditionalRequest, invalidateImageCache, streamImageWithCache } 
 import { deduplicatedFetch } from '~/server/utils/request-dedup';
 import { useLogger } from '~/utils/use-logger';
 
-const logger = useLogger('nft-image-proxy');
+const logger = useLogger('ens-avatar-proxy');
 
 // Request validation schema
 const querySchema = z.object({
   _invalidate: z.string().optional(), // Force cache invalidation
-  url: z.string().url().refine(
-    url =>
-      // Only allow IPFS URLs
-      url.startsWith('ipfs://') || url.includes('gateway.pinata.cloud/ipfs/'),
-    {
-      message: 'Only IPFS URLs are allowed',
-    },
-  ),
+  name: z.string().regex(/^[\dA-Za-z-]+\.eth$/, 'Invalid ENS name format'),
+  network: z.enum(['mainnet', 'sepolia']).default('mainnet').optional(),
 });
-
-// Convert IPFS URL to HTTP URL
-function normalizeIpfsUrl(url: string): string {
-  if (url.startsWith('ipfs://')) {
-    return `${IPFS_URL}${url.slice(7)}`;
-  }
-  return url;
-}
 
 export default defineEventHandler(async (event) => {
   try {
     // Validate query parameters
     const query = await getValidatedQuery(event, data => querySchema.parse(data));
-    const { _invalidate, url } = query;
+    const { _invalidate, name: ensName, network = 'mainnet' } = query;
 
-    // Normalize the URL
-    const normalizedUrl = normalizeIpfsUrl(url);
-
-    // Create cache key
-    const cacheKey = createImageCacheKey(url);
+    // Create cache key using ENS name and network
+    const cacheKey = createImageCacheKey(`ens:${network}:${ensName}`);
 
     // Check for cache invalidation request
     if (_invalidate) {
       await invalidateImageCache(cacheKey);
-      logger.info(`Cache invalidated for: ${url}`);
+      logger.info(`Cache invalidated for ENS avatar: ${ensName} on ${network}`);
     }
 
     // Check conditional request headers for cached metadata
@@ -57,18 +39,19 @@ export default defineEventHandler(async (event) => {
       return null; // 304 response already sent
     }
 
-    logger.debug(`Processing image request: ${normalizedUrl}`, {
-      invalidate: !!_invalidate,
-    });
+    logger.debug(`Processing ENS avatar request: ${ensName} on ${network}`);
+
+    // Construct ENS metadata URL
+    const metadataUrl = `https://metadata.ens.domains/${network}/avatar/${ensName}`;
 
     // Use request deduplication to prevent multiple concurrent fetches
     await deduplicatedFetch(cacheKey, async () => {
       // Stream and cache the image
-      await streamImageWithCache(event, normalizedUrl, cacheKey, CACHE_TTL.IMAGE);
+      await streamImageWithCache(event, metadataUrl, cacheKey, CACHE_TTL.IMAGE);
       return true;
     });
 
-    logger.debug(`Successfully processed image: ${normalizedUrl}`);
+    logger.debug(`Successfully processed avatar for: ${ensName}`);
   }
   catch (error) {
     // Set cache headers for error responses to prevent caching errors

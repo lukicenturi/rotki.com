@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { set } from '@vueuse/core';
+import { get, set } from '@vueuse/core';
 import { useBlockie } from '~/composables/use-blockie';
 
 interface Props {
@@ -9,6 +9,8 @@ interface Props {
 
 const props = defineProps<Props>();
 
+const { address, ensName } = toRefs(props);
+
 const avatarUrl = ref<string>();
 const loading = ref<boolean>(false);
 const hasError = ref<boolean>(false);
@@ -16,10 +18,11 @@ const hasError = ref<boolean>(false);
 const { getBlockie } = useBlockie();
 
 // Get blockie for the address
-const blockieUrl = computed(() => getBlockie(props.address));
+const blockieUrl = computed(() => getBlockie(get(address)));
 
 async function fetchAvatar() {
-  if (!props.ensName) {
+  const ens = get(ensName);
+  if (!ens) {
     return;
   }
 
@@ -27,12 +30,12 @@ async function fetchAvatar() {
     set(loading, true);
     set(hasError, false);
 
-    // Use ENS metadata service to get avatar
-    const response = await fetch(`https://metadata.ens.domains/mainnet/avatar/${props.ensName}`);
+    // Use our cached ENS avatar endpoint
+    const response = await fetch(`/api/ens/avatar?name=${encodeURIComponent(ens)}`);
 
     if (response.ok) {
-      // The metadata service returns the image directly
-      set(avatarUrl, `https://metadata.ens.domains/mainnet/avatar/${props.ensName}`);
+      // Use our cached endpoint URL
+      set(avatarUrl, `/api/ens/avatar?name=${encodeURIComponent(ens)}`);
     }
     else {
       set(hasError, true);
@@ -51,7 +54,7 @@ onMounted(() => {
 });
 
 // Re-fetch if ENS name changes
-watch(() => props.ensName, () => {
+watch(ensName, () => {
   fetchAvatar();
 });
 </script>
