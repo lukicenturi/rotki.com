@@ -1,7 +1,6 @@
 import { get } from '@vueuse/shared';
 import { computed } from 'vue';
 import { useLeaderboardMetadata } from '~/composables/use-leaderboard-metadata';
-import { getBackendUrl } from '~/utils/proxy';
 import { useLogger } from '~/utils/use-logger';
 import { CHAIN_CONFIGS, FALLBACK_CHAIN, FALLBACK_CONTRACT_ADDRESS } from './constants';
 
@@ -23,8 +22,10 @@ let lastContractAddress: string | undefined;
 export async function getServerNftConfig() {
   const logger = useLogger();
   try {
+    const { baseUrl } = useRuntimeConfig().public;
+
     // Use the proxy utility to get the backend URL
-    const apiUrl = getBackendUrl('/webapi/leaderboard/metadata/');
+    const apiUrl = `${baseUrl}/webapi/leaderboard/metadata/`;
 
     // Log the URL for debugging
     logger.warn('[Server] Fetching leaderboard metadata from:', apiUrl);
