@@ -30,12 +30,13 @@ async function fetchAvatar() {
     set(loading, true);
     set(hasError, false);
 
+    const url = `/api/ens/avatar?name=${encodeURIComponent(ens)}`;
     // Use our cached ENS avatar endpoint
-    const response = await fetch(`/api/ens/avatar?name=${encodeURIComponent(ens)}`);
+    const response = await fetch(url);
 
     if (response.ok) {
       // Use our cached endpoint URL
-      set(avatarUrl, `/api/ens/avatar?name=${encodeURIComponent(ens)}`);
+      set(avatarUrl, url);
     }
     else {
       set(hasError, true);

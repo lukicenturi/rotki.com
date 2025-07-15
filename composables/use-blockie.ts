@@ -1,4 +1,4 @@
-import { createBlockie } from '~/utils/blockie';
+import { createBlockie } from '@rotki/ui-library';
 
 const CACHE_SIZE = 100;
 
