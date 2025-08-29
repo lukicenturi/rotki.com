@@ -6,6 +6,41 @@ const { t } = useI18n({ useScope: 'global' });
 
 const showAll = ref(false);
 
+const sponsors = [
+  {
+    name: 'Lefteris Karapetsas',
+    image: 'https://avatars.githubusercontent.com/u/1658405?v=4',
+  },
+  {
+    name: 'DataLorge Solutions',
+    image: 'https://placehold.co/150x150/1F2937/FFFFFF?text=DataLorge&font=playfair-display',
+  },
+  {
+    name: 'Michael Rodriguez',
+    image: 'https://avatars.githubusercontent.com/u/5394839?v=4',
+  },
+  {
+    name: 'CryptoFlow Labs',
+    image: 'https://placehold.co/150x150/10B981/FFFFFF?text=CF.&font=Lora',
+  },
+  {
+    name: 'Alex Kumar',
+    image: 'https://avatars.githubusercontent.com/u/12312313?v=4',
+  },
+  {
+    name: 'Julia Martinez',
+    image: 'https://avatars.githubusercontent.com/u/12313144?v=4',
+  },
+  {
+    name: 'Quantum Labs',
+    image: 'https://placehold.co/150x150/F59E0B/1F2937?text=QLabs&font=Oswald',
+  },
+  {
+    name: 'Sophie Dubois',
+    image: 'https://avatars.githubusercontent.com/u/123128?v=4',
+  },
+];
+
 function getOS() {
   const userAgent = navigator.userAgent.toLowerCase();
 
@@ -112,6 +147,39 @@ const highlightedDownloadItem = computed<DownloadItemSingle[]>(() => {
           </div>
         </RuiAccordion>
       </RuiAccordions>
+
+      <div class="flex items-center mt-6 gap-12">
+        <div class="flex flex-col mb-4 w-[150px]">
+          <img
+            src="https://photoai.com/assets/laurel.svg"
+            class="w-full"
+          />
+          <div class="text-center -mt-11 text-sm">
+            <div>This release</div>
+            <div class="text-rui-text-secondary">
+              Sponsored by:
+            </div>
+          </div>
+        </div>
+        <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
+          <div
+            v-for="(sponsor, index) in sponsors"
+            :key="index"
+            class="flex flex-col gap-3"
+          >
+            <img
+              class="size-12 min-w-12 rounded-md overflow-hidden"
+              :src="sponsor.image"
+              :alt="sponsor.name"
+            />
+            <div class="flex flex-col justify-between">
+              <div class="uppercase text-sm font-bold text-left leading-5 text-rui-text-secondary">
+                {{ sponsor.name }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
