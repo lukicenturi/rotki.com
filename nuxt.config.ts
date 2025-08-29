@@ -98,7 +98,9 @@ export default defineNuxtConfig({
 
   components: [{ path: '~/components', pathPrefix: false }],
 
-  css: [],
+  css: [
+    '~/assets/css/nprogress.css',
+  ],
 
   devtools: {
     enabled: process.env.NODE_ENV === 'development' && !(!!process.env.CI || !!process.env.TEST),
