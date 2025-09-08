@@ -59,6 +59,7 @@ const policy: Record<ContentPolicy, string[]> = {
     'https://push.walletconnect.org',
     'wss://www.walletlink.org',
     'www.google.com/recaptcha/',
+    'https://chain-proxy.wallet.coinbase.com',
   ],
   [ContentPolicy.DEFAULT_SRC]: [SELF],
   [ContentPolicy.FONT_SRC]: [SELF, 'data:', 'fonts.gstatic.com'],
