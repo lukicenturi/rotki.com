@@ -10,10 +10,11 @@ import {
   type CardPaymentRequest,
   type PaymentStep,
   type Result,
+  UpgradeCardCheckout,
 } from '~/types';
 
 export function useBraintree() {
-  const checkoutData = ref<CardCheckout | null>(null);
+  const checkoutData = ref<CardCheckout | UpgradeCardCheckout | null>(null);
   const loadingPlan = ref(false);
   const pending = ref(false);
   const paymentSuccess = ref(false);
@@ -25,6 +26,37 @@ export function useBraintree() {
   const { fetchWithCsrf } = useFetchWithCsrf();
 
   const { planId } = usePlanIdParam();
+  const { upgradeSubId } = useSubscriptionIdParam();
+
+  async function getUpdateCardCheckoutData(planId: number): Promise<Result<UpgradeCardCheckout>> {
+    set(loadingPlan, true);
+    try {
+      const response = await fetchWithCsrf<UpgradeCardCheckout>(
+        `/webapi/2/braintree/upgrade/quote`,
+        {
+          body: {
+            planId,
+          },
+          method: 'POST',
+        },
+      );
+      const data = UpgradeCardCheckout.parse(response);
+      return {
+        isError: false,
+        result: data,
+      };
+    }
+    catch (error: any) {
+      logger.error(error);
+      return {
+        error,
+        isError: true,
+      };
+    }
+    finally {
+      set(loadingPlan, false);
+    }
+  }
 
   async function getCardCheckoutData(planId: number): Promise<Result<CardCheckout>> {
     set(loadingPlan, true);
@@ -57,7 +89,11 @@ export function useBraintree() {
   }
 
   async function loadPlan(planId: number) {
-    const data = await getCardCheckoutData(planId);
+    const data =
+      isDefined(upgradeSubId)
+        ? await getUpdateCardCheckoutData(planId)
+        : await getCardCheckoutData(planId);
+
     if (data.isError)
       router.back();
     else
@@ -159,6 +195,7 @@ export function useBraintree() {
   const { selectedPlan } = useSelectedPlan();
 
   return {
+    checkoutData,
     loading: loadingPlan,
     nextPayment,
     pending,
